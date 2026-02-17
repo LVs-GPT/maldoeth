@@ -1,0 +1,28 @@
+# Environment
+.env
+.env.local
+
+# Foundry
+packages/contracts/out/
+packages/contracts/cache/
+packages/contracts/lib/
+packages/contracts/broadcast/*/31337/
+packages/contracts/.gas-snapshot
+
+# Node
+node_modules/
+packages/server/dist/
+packages/dashboard/.next/
+packages/dashboard/out/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Deployments (keep the json, ignore backups)
+*.bak
+
+# OS
+.DS_Store
+Thumbs.db

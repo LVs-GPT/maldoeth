@@ -1,0 +1,16 @@
+{
+  "name": "maldoeth",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Trust layer for AI agent commerce",
+  "packageManager": "pnpm@9.0.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test:contracts": "cd packages/contracts && forge test -vv",
+    "deploy:sepolia": "cd packages/contracts && forge script script/Deploy.s.sol --rpc-url $SEPOLIA_RPC_URL --broadcast --verify",
+    "dev:server": "cd packages/server && pnpm dev",
+    "lint": "cd packages/contracts && forge fmt --check"
+  }
+}
