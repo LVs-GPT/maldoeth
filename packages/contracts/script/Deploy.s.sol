@@ -15,15 +15,17 @@ contract Deploy is Script {
     address constant USDC_SEPOLIA = 0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238;
     address constant IDENTITY_REGISTRY = 0x8004A818BFB912233c491871b3d84c89A494BD9e;
     address constant REPUTATION_REGISTRY = 0x8004B663056A597Dffe9eCcC1965A193B7388713;
-    // x402 facilitator: set to your facilitator address or Coinbase's production one
-    address constant X402_FACILITATOR = 0x0000000000000000000000000000000000000001; // REPLACE
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
         address deployer = vm.addr(deployerPrivateKey);
 
+        // x402 facilitator: reads from env, defaults to deployer for PoC testing
+        address facilitator = vm.envOr("X402_FACILITATOR", deployer);
+
         console2.log("Deploying Maldo PoC contracts to Sepolia");
         console2.log("Deployer:", deployer);
+        console2.log("Facilitator:", facilitator);
         console2.log("USDC:", USDC_SEPOLIA);
 
         vm.startBroadcast(deployerPrivateKey);
@@ -37,7 +39,7 @@ contract Deploy is Script {
         MaldoEscrowX402 escrow = new MaldoEscrowX402(
             USDC_SEPOLIA,
             address(mockKleros),
-            X402_FACILITATOR,
+            facilitator,     // x402 facilitator (deployer for PoC, Coinbase for prod)
             deployer,        // feeRecipient — deployer wallet for PoC
             REPUTATION_REGISTRY
         );

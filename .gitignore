@@ -5,7 +5,6 @@
 # Foundry
 packages/contracts/out/
 packages/contracts/cache/
-packages/contracts/lib/
 packages/contracts/broadcast/*/31337/
 packages/contracts/.gas-snapshot
 

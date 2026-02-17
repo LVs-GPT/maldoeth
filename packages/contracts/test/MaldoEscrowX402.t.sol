@@ -2,8 +2,8 @@
 pragma solidity ^0.8.24;
 
 import {Test, console2} from "forge-std/Test.sol";
-import {MaldoEscrowX402} from "../../src/MaldoEscrowX402.sol";
-import {MockKleros} from "../../src/mocks/MockKleros.sol";
+import {MaldoEscrowX402} from "../src/MaldoEscrowX402.sol";
+import {MockKleros} from "../src/mocks/MockKleros.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @dev Mock USDC for testing
