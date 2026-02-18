@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 
+interface AgentReputation {
+  bayesianScore: number;
+  reviewCount: number;
+  disputeRate: number;
+  badges: string[];
+}
+
 interface AgentProps {
   agentId: string;
   name: string;
   capabilities: string[];
   basePrice: number;
-  reputation: {
-    bayesianScore: number;
-    reviewCount: number;
-    disputeRate: number;
-    badges: string[];
-  };
+  reputation?: AgentReputation;
 }
 
 const BADGE_COLORS: Record<string, string> = {
@@ -22,13 +24,19 @@ const BADGE_COLORS: Record<string, string> = {
 };
 
 export function AgentCard({ agent }: { agent: AgentProps }) {
-  const { reputation } = agent;
+  const reputation = agent.reputation;
+  const score = reputation?.bayesianScore ?? 0;
+  const reviewCount = reputation?.reviewCount ?? 0;
+  const badges = reputation?.badges ?? [];
+
   const scoreColor =
-    reputation.bayesianScore >= 4.5
+    score >= 4.5
       ? "text-green-400"
-      : reputation.bayesianScore >= 3.5
+      : score >= 3.5
         ? "text-yellow-400"
-        : "text-red-400";
+        : score > 0
+          ? "text-red-400"
+          : "text-zinc-600";
 
   return (
     <Link
@@ -38,7 +46,7 @@ export function AgentCard({ agent }: { agent: AgentProps }) {
       <div className="mb-2 flex items-start justify-between">
         <h3 className="font-medium text-zinc-100">{agent.name}</h3>
         <span className={`text-lg font-bold ${scoreColor}`}>
-          {reputation.bayesianScore.toFixed(1)}
+          {score > 0 ? score.toFixed(1) : "—"}
         </span>
       </div>
 
@@ -55,14 +63,16 @@ export function AgentCard({ agent }: { agent: AgentProps }) {
 
       <div className="mb-2 flex items-center justify-between text-sm">
         <span className="text-zinc-500">
-          {reputation.reviewCount} review{reputation.reviewCount !== 1 ? "s" : ""}
+          {reviewCount > 0
+            ? `${reviewCount} review${reviewCount !== 1 ? "s" : ""}`
+            : "No reviews yet"}
         </span>
         <span className="text-zinc-300">${(agent.basePrice / 1e6).toFixed(2)}</span>
       </div>
 
-      {reputation.badges.length > 0 && (
+      {badges.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {reputation.badges.map((badge) => (
+          {badges.map((badge) => (
             <span
               key={badge}
               className={`rounded-full px-2 py-0.5 text-xs ${BADGE_COLORS[badge] || "bg-zinc-700 text-zinc-300"}`}
