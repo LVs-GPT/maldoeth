@@ -178,10 +178,37 @@ export class DealService {
   }
 
   approveOrReject(approvalId: number, decision: "approved" | "rejected") {
-    const result = this.db
-      .prepare("UPDATE pending_approvals SET status = ? WHERE id = ? AND status = 'pending'")
+    // Fetch the pending approval first
+    const approval = this.db
+      .prepare("SELECT * FROM pending_approvals WHERE id = ? AND status = 'pending'")
+      .get(approvalId) as PendingApprovalRow | undefined;
+
+    if (!approval) throw new ApiError(404, "Pending approval not found or already processed");
+
+    this.db
+      .prepare("UPDATE pending_approvals SET status = ? WHERE id = ?")
       .run(decision, approvalId);
-    if (result.changes === 0) throw new ApiError(404, "Pending approval not found or already processed");
+
+    // When approved, create the deal so it appears in the deals table
+    if (decision === "approved") {
+      const nonce = ethers.hexlify(ethers.randomBytes(32));
+
+      this.db
+        .prepare(
+          `INSERT INTO deals (nonce, client, server, amount, status, task_description)
+           VALUES (?, ?, ?, ?, 'Funded', ?)`,
+        )
+        .run(
+          nonce,
+          approval.principal,
+          approval.agent_id,
+          approval.price_usdc,
+          approval.task_description || "",
+        );
+
+      return { id: approvalId, status: decision, nonce };
+    }
+
     return { id: approvalId, status: decision };
   }
 }
@@ -194,5 +221,17 @@ interface DealRow {
   amount: number;
   status: string;
   task_description: string | null;
+  created_at: string;
+}
+
+interface PendingApprovalRow {
+  id: number;
+  principal: string;
+  agent_id: string;
+  agent_name: string | null;
+  price_usdc: number;
+  task_description: string | null;
+  failed_checks: string;
+  status: string;
   created_at: string;
 }
