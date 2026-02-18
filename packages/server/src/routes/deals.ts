@@ -5,7 +5,7 @@ import { ApiError } from "../services/registration.js";
 export function createDealsRouter(dealService: DealService): Router {
   const router = Router();
 
-  // POST /api/v1/deals/create
+  // POST /api/v1/deals/create — creates deal on-chain (USDC transfer + escrow)
   router.post("/create", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { agentId, clientAddress, priceUSDC, taskDescription, principal } = req.body;
@@ -58,10 +58,33 @@ export function createDealsRouter(dealService: DealService): Router {
     }
   });
 
-  // POST /api/v1/deals/:nonce/complete
-  router.post("/:nonce/complete", (req: Request, res: Response, next: NextFunction) => {
+  // POST /api/v1/deals/:nonce/complete — completes deal on-chain (releases USDC to server)
+  router.post("/:nonce/complete", async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = dealService.completeDeal(req.params.nonce);
+      const result = await dealService.completeDeal(req.params.nonce);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // POST /api/v1/deals/:nonce/dispute — disputes deal on-chain (freezes USDC, pays arbitration fee)
+  router.post("/:nonce/dispute", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await dealService.disputeDeal(req.params.nonce);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // POST /api/v1/deals/:nonce/resolve — resolves dispute via MockKleros
+  // Body: { ruling: 0 | 1 | 2 } → 0=split, 1=buyer wins, 2=seller wins
+  router.post("/:nonce/resolve", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { ruling } = req.body;
+      if (ruling === undefined || ruling === null) throw new ApiError(400, "ruling is required (0=split, 1=buyer-wins, 2=seller-wins)");
+      const result = await dealService.resolveDispute(req.params.nonce, Number(ruling));
       res.json(result);
     } catch (err) {
       next(err);

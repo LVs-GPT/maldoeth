@@ -1,5 +1,12 @@
 // Minimal ABIs for interacting with deployed contracts
 
+export const ERC20_ABI = [
+  "function approve(address spender, uint256 amount) external returns (bool)",
+  "function transfer(address to, uint256 amount) external returns (bool)",
+  "function balanceOf(address account) external view returns (uint256)",
+  "function allowance(address owner, address spender) external view returns (uint256)",
+] as const;
+
 export const ERC8004_IDENTITY_ABI = [
   "function mint(address to, string memory uri) external returns (uint256 tokenId)",
   "function tokenURI(uint256 tokenId) external view returns (string memory)",

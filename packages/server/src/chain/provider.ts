@@ -1,6 +1,7 @@
 import { ethers } from "ethers";
 import { config } from "../config.js";
 import {
+  ERC20_ABI,
   ERC8004_IDENTITY_ABI,
   ERC8004_REPUTATION_ABI,
   MALDO_ESCROW_ABI,
@@ -46,4 +47,8 @@ export function getRouter(): ethers.Contract {
 
 export function getMockKleros(): ethers.Contract {
   return new ethers.Contract(config.mockKlerosAddress, MOCK_KLEROS_ABI, getSigner());
+}
+
+export function getUsdc(): ethers.Contract {
+  return new ethers.Contract(config.usdcAddress, ERC20_ABI, getSigner());
 }
