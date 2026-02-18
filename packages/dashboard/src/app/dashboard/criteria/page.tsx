@@ -10,21 +10,21 @@ const PRESETS = [
     description: "High trust bar. Only established agents auto-approve. Best for high-value operations.",
     minReputation: 480,
     minReviewCount: 5,
-    maxPriceUSDC: 50_000_000,
+    maxPriceUSDC: 100_000, // $0.10 USDC
   },
   {
     name: "Balanced",
     description: "Moderate trust bar. Good balance of autonomy and safety. Recommended for most use cases.",
     minReputation: 400,
     minReviewCount: 3,
-    maxPriceUSDC: 100_000_000,
+    maxPriceUSDC: 1_000_000, // $1 USDC
   },
   {
     name: "Aggressive",
     description: "Low trust bar. Maximum autonomy. Only use for low-risk or experimental operations.",
     minReputation: 300,
     minReviewCount: 1,
-    maxPriceUSDC: 500_000_000,
+    maxPriceUSDC: 10_000_000, // $10 USDC
   },
 ];
 
@@ -89,17 +89,17 @@ export default function CriteriaPage() {
               disabled={saving}
               className={`rounded-lg border p-4 text-left transition-all ${
                 isActive
-                  ? "border-indigo-500 bg-indigo-500/10"
+                  ? "border-maldo-500 bg-maldo-500/10"
                   : "border-zinc-800 hover:border-zinc-600"
               } disabled:opacity-50`}
             >
               <div className="mb-1 flex items-center gap-2">
                 <span
                   className={`h-2.5 w-2.5 rounded-full ${
-                    isActive ? "bg-indigo-400" : "bg-zinc-600"
+                    isActive ? "bg-maldo-400" : "bg-zinc-600"
                   }`}
                 />
-                <h3 className={`font-semibold ${isActive ? "text-indigo-300" : "text-zinc-200"}`}>
+                <h3 className={`font-semibold ${isActive ? "text-maldo-300" : "text-zinc-200"}`}>
                   {preset.name}
                 </h3>
               </div>
@@ -107,7 +107,7 @@ export default function CriteriaPage() {
               <div className="space-y-1 text-xs text-zinc-400">
                 <p>Min reputation: {(preset.minReputation / 100).toFixed(1)}</p>
                 <p>Min reviews: {preset.minReviewCount}</p>
-                <p>Max price: ${(preset.maxPriceUSDC / 1e6).toFixed(0)}</p>
+                <p>Max price: ${(preset.maxPriceUSDC / 1e6).toFixed(2)}</p>
               </div>
             </button>
           );
@@ -126,7 +126,7 @@ export default function CriteriaPage() {
             <ConfigItem label="Preset" value={criteriaData.preset} />
             <ConfigItem label="Min Reputation" value={(criteriaData.minReputation / 100).toFixed(1)} />
             <ConfigItem label="Min Reviews" value={criteriaData.minReviewCount} />
-            <ConfigItem label="Max Price" value={`$${(criteriaData.maxPriceUSDC / 1e6).toFixed(0)}`} />
+            <ConfigItem label="Max Price" value={`$${(criteriaData.maxPriceUSDC / 1e6).toFixed(2)}`} />
           </div>
         </section>
       )}
@@ -136,11 +136,11 @@ export default function CriteriaPage() {
         <h2 className="mb-2 text-sm font-semibold text-zinc-400">Impact Preview</h2>
         <p className="text-sm text-zinc-500">
           {currentPreset === "Conservative" &&
-            "With Conservative criteria, only well-established agents (4.8+ score, 5+ reviews) will auto-approve. Most deals will require your manual approval."}
+            "With Conservative criteria, only well-established agents (4.8+ score, 5+ reviews) will auto-approve up to $0.10. Most deals will require your manual approval."}
           {currentPreset === "Balanced" &&
-            "With Balanced criteria, agents with moderate reputation (4.0+ score, 3+ reviews) will auto-approve up to $100. Good balance of autonomy and safety."}
+            "With Balanced criteria, agents with moderate reputation (4.0+ score, 3+ reviews) will auto-approve up to $1. Good balance of autonomy and safety."}
           {currentPreset === "Aggressive" &&
-            "With Aggressive criteria, most agents will auto-approve up to $500. Use with caution — only recommended for low-risk experimental tasks."}
+            "With Aggressive criteria, most agents will auto-approve up to $10. Use with caution — only recommended for low-risk experimental tasks."}
         </p>
       </section>
     </div>

@@ -17,7 +17,7 @@ export function Navbar() {
     <nav className="border-b border-zinc-800 bg-zinc-950">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
         <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="text-lg font-bold text-indigo-400">
+          <Link href="/dashboard" className="text-lg font-bold text-maldo-400">
             Maldo
           </Link>
           <div className="flex gap-1">
@@ -27,7 +27,7 @@ export function Navbar() {
                 href={item.href}
                 className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
                   pathname === item.href
-                    ? "bg-indigo-500/20 text-indigo-300"
+                    ? "bg-maldo-500/20 text-maldo-300"
                     : "text-zinc-400 hover:text-zinc-200"
                 }`}
               >

@@ -21,24 +21,24 @@ const PRESETS: Record<Exclude<CriteriaPreset, "Custom">, Omit<CriteriaConfig, "p
   Conservative: {
     minReputation: 480,
     minReviewCount: 5,
-    maxPriceUSDC: 50_000_000,
+    maxPriceUSDC: 100_000, // $0.10 USDC
     requireHumanApproval: false,
   },
   Balanced: {
     minReputation: 450,
     minReviewCount: 3,
-    maxPriceUSDC: 100_000_000,
+    maxPriceUSDC: 1_000_000, // $1 USDC
     requireHumanApproval: false,
   },
   Aggressive: {
     minReputation: 400,
     minReviewCount: 1,
-    maxPriceUSDC: 500_000_000,
+    maxPriceUSDC: 10_000_000, // $10 USDC
     requireHumanApproval: false,
   },
 };
 
-const HIGH_VALUE_THRESHOLD = 100_000_000; // $100 USDC
+const HIGH_VALUE_THRESHOLD = 10_000_000; // $10 USDC
 
 export interface ReputationReader {
   getSummary(agentId: string): Promise<{ averageValue: number; feedbackCount: number }>;

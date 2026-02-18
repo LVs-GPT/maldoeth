@@ -11,6 +11,12 @@ const config: Config = {
       colors: {
         background: "var(--background)",
         foreground: "var(--foreground)",
+        maldo: {
+          300: "#5cffb0",
+          400: "#00e87a",
+          500: "#00c968",
+          600: "#00a857",
+        },
       },
     },
   },

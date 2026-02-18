@@ -17,6 +17,10 @@ async function fetchApi(path: string, options?: RequestInit) {
 
 // ─── Agents ─────────────────────────────────────────────────────────
 
+export async function listAgents() {
+  return fetchApi("/api/v1/agents");
+}
+
 export async function discoverAgents(capability: string, limit = 10) {
   const params = new URLSearchParams({ capability, limit: String(limit) });
   return fetchApi(`/api/v1/services/discover?${params}`);

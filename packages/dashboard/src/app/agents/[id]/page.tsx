@@ -38,7 +38,7 @@ export default function AgentProfilePage() {
   if (loading) {
     return (
       <div className="flex items-center gap-2 py-20 text-zinc-500">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-600 border-t-indigo-400" />
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-600 border-t-maldo-400" />
         Loading agent profile...
       </div>
     );
@@ -48,7 +48,7 @@ export default function AgentProfilePage() {
     return (
       <div className="py-20 text-center">
         <p className="text-red-400">{error || "Agent not found"}</p>
-        <Link href="/agents" className="mt-4 text-sm text-indigo-400 hover:underline">
+        <Link href="/agents" className="mt-4 text-sm text-maldo-400 hover:underline">
           Back to discovery
         </Link>
       </div>
@@ -65,7 +65,7 @@ export default function AgentProfilePage() {
   return (
     <div className="space-y-8">
       {/* Back link */}
-      <Link href="/agents" className="text-sm text-indigo-400 hover:underline">
+      <Link href="/agents" className="text-sm text-maldo-400 hover:underline">
         &larr; Back to discovery
       </Link>
 
@@ -89,7 +89,7 @@ export default function AgentProfilePage() {
         {agent.capabilities?.map((cap: string) => (
           <span
             key={cap}
-            className="rounded-full bg-indigo-500/20 px-3 py-1 text-sm text-indigo-300"
+            className="rounded-full bg-maldo-500/20 px-3 py-1 text-sm text-maldo-300"
           >
             {cap}
           </span>
