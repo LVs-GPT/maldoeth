@@ -313,8 +313,10 @@ export class DealService {
     const deal = await escrow.getDeal(nonce);
     const arbitratorDisputeId = deal.arbitratorDisputeId;
 
-    if (arbitratorDisputeId === 0n) {
-      throw new ApiError(400, "No dispute found on-chain for this deal");
+    // Note: disputeId 0 is valid (MockKleros starts at 0), so check on-chain status instead
+    // DealStatus enum: 0=Funded, 1=Completed, 2=Disputed, 3=Refunded
+    if (deal.status !== 2n) {
+      throw new ApiError(400, "Deal is not disputed on-chain");
     }
 
     const mockKleros = getMockKleros();
