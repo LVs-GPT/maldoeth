@@ -31,8 +31,8 @@ const PRESETS: Record<Exclude<CriteriaPreset, "Custom">, Omit<CriteriaConfig, "p
     requireHumanApproval: false,
   },
   Aggressive: {
-    minReputation: 400,
-    minReviewCount: 1,
+    minReputation: 0,
+    minReviewCount: 0,
     maxPriceUSDC: 10_000_000, // $10 USDC
     requireHumanApproval: false,
   },

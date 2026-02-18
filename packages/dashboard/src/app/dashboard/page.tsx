@@ -22,7 +22,7 @@ export default function DashboardPage() {
           : { pendingApprovals: [] },
       ]);
       setDeals(dealsData.deals || []);
-      setPendingApprovals(pendingData.pendingApprovals || []);
+      setPendingApprovals(pendingData.approvals || pendingData.pendingApprovals || []);
     } finally {
       setLoading(false);
     }
