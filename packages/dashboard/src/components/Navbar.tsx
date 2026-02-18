@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/criteria", label: "Criteria" },
   { href: "/agents", label: "Agents" },
+  { href: "/disputes", label: "Disputes", accent: true },
 ];
 
 export function Navbar() {
@@ -26,6 +27,7 @@ export function Navbar() {
           <div className="flex items-center gap-6">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href;
+              const accentColor = (item as any).accent ? "var(--red)" : "var(--green)";
               return (
                 <Link
                   key={item.href}
@@ -33,12 +35,14 @@ export function Navbar() {
                   className={`text-xs tracking-[0.05em] transition-colors ${
                     isActive
                       ? "text-[var(--foreground)]"
-                      : "text-[var(--mid)] hover:text-[var(--foreground)]"
+                      : (item as any).accent
+                        ? "text-[var(--red)] hover:text-[var(--foreground)]"
+                        : "text-[var(--mid)] hover:text-[var(--foreground)]"
                   }`}
                 >
                   {item.label}
                   {isActive && (
-                    <span className="block h-[2px] mt-1 bg-[var(--green)]" />
+                    <span className="block h-[2px] mt-1" style={{ backgroundColor: accentColor }} />
                   )}
                 </Link>
               );

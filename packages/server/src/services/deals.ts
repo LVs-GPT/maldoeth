@@ -159,13 +159,14 @@ export class DealService {
    */
   private async fundDealOnChain(
     nonce: string,
-    clientAddress: string,
+    _clientAddress: string,
     serverAddress: string,
     totalAmount: bigint,
   ): Promise<string> {
     return withRetry(async () => {
       const usdc = getUsdc();
       const escrow = getEscrow();
+      const signerAddress = await getSigner().getAddress();
 
       // 1. Approve escrow to spend USDC
       const approveTx = await usdc.approve(config.escrowAddress, totalAmount);
@@ -175,10 +176,13 @@ export class DealService {
       const transferTx = await usdc.transfer(config.escrowAddress, totalAmount);
       await transferTx.wait();
 
-      // 3. Call receivePayment as facilitator
+      // 3. Call receivePayment as facilitator.
+      //    Use signer address as on-chain client so the server wallet can call
+      //    completeDeal / dispute (which require msg.sender == deal.client).
+      //    The real client address is tracked in the local DB.
       const paymentTx = await escrow.receivePayment(
         nonce,
-        clientAddress,
+        signerAddress,
         serverAddress,
         totalAmount,
       );

@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 import { ApiError } from "./registration.js";
 
-export type CriteriaPreset = "Conservative" | "Balanced" | "Aggressive" | "Custom";
+export type CriteriaPreset = "Conservative" | "Balanced" | "Aggressive" | "Demo" | "Custom";
 
 export interface CriteriaConfig {
   preset: CriteriaPreset;
@@ -36,9 +36,15 @@ const PRESETS: Record<Exclude<CriteriaPreset, "Custom">, Omit<CriteriaConfig, "p
     maxPriceUSDC: 10_000_000, // $10 USDC
     requireHumanApproval: false,
   },
+  Demo: {
+    minReputation: 0,
+    minReviewCount: 0,
+    maxPriceUSDC: 100_000_000, // $100 USDC — no practical limit for demos
+    requireHumanApproval: false,
+  },
 };
 
-const HIGH_VALUE_THRESHOLD = 10_000_000; // $10 USDC
+const HIGH_VALUE_THRESHOLD = 100_000_000; // $100 USDC (raised for Demo preset)
 
 export interface ReputationReader {
   getSummary(agentId: string): Promise<{ averageValue: number; feedbackCount: number }>;

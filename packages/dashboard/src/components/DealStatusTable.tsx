@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { completeDeal, disputeDeal, resolveDispute } from "@/lib/api";
+import { completeDeal, disputeDeal } from "@/lib/api";
 import { RateAgentModal } from "./RateAgentModal";
 
 interface Deal {
@@ -22,12 +22,6 @@ const STATUS_STYLES: Record<string, string> = {
   Refunded: "border-[var(--dim)] text-[var(--mid)]",
 };
 
-const RULING_OPTIONS = [
-  { value: 1, label: "Buyer wins", description: "Refund USDC to client" },
-  { value: 2, label: "Seller wins", description: "Release USDC to server" },
-  { value: 0, label: "Split", description: "Split equally" },
-];
-
 interface Props {
   deals: Deal[];
   userAddress?: string;
@@ -37,8 +31,6 @@ interface Props {
 export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
   const [completing, setCompleting] = useState<string | null>(null);
   const [disputing, setDisputing] = useState<string | null>(null);
-  const [resolving, setResolving] = useState<string | null>(null);
-  const [showResolveMenu, setShowResolveMenu] = useState<string | null>(null);
   const [ratingDeal, setRatingDeal] = useState<Deal | null>(null);
 
   const handleComplete = async (deal: Deal) => {
@@ -64,19 +56,6 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
       alert(err.message);
     } finally {
       setDisputing(null);
-    }
-  };
-
-  const handleResolve = async (deal: Deal, ruling: number) => {
-    setShowResolveMenu(null);
-    setResolving(deal.nonce);
-    try {
-      await resolveDispute(deal.nonce, ruling);
-      onUpdate?.();
-    } catch (err: any) {
-      alert(err.message);
-    } finally {
-      setResolving(null);
     }
   };
 
@@ -149,38 +128,9 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
                     )}
 
                     {deal.status === "Disputed" && (
-                      <div className="relative">
-                        <button
-                          onClick={() =>
-                            setShowResolveMenu(
-                              showResolveMenu === deal.nonce ? null : deal.nonce,
-                            )
-                          }
-                          disabled={resolving === deal.nonce}
-                          className="btn btn-warning py-1 px-3 text-xs"
-                        >
-                          {resolving === deal.nonce ? "\u2026" : "Resolve"}
-                        </button>
-
-                        {showResolveMenu === deal.nonce && (
-                          <div className="absolute right-0 z-10 mt-2 w-52 border border-[var(--border)] bg-[var(--surface)] shadow-xl animate-fade-in">
-                            {RULING_OPTIONS.map((opt) => (
-                              <button
-                                key={opt.value}
-                                onClick={() => handleResolve(deal, opt.value)}
-                                className="block w-full px-4 py-2.5 text-left text-xs transition-colors hover:bg-[var(--surface-raised)]"
-                              >
-                                <span className="font-bold text-[var(--foreground)]">
-                                  {opt.label}
-                                </span>
-                                <span className="ml-1.5 text-[var(--mid)]">
-                                  &mdash; {opt.description}
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <span className="text-[11px] text-[var(--mid)]">
+                        Awaiting juror ruling
+                      </span>
                     )}
 
                     {deal.status === "Completed" && userAddress && (

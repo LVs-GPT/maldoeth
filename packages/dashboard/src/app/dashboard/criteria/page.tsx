@@ -29,6 +29,14 @@ const PRESETS = [
     minReviewCount: 1,
     maxPriceUSDC: 10_000_000,
   },
+  {
+    name: "Demo",
+    color: "var(--red)",
+    description: "No restrictions. All deals auto-approve. For demos only.",
+    minReputation: 0,
+    minReviewCount: 0,
+    maxPriceUSDC: 100_000_000,
+  },
 ];
 
 const IMPACT_TEXT: Record<string, string> = {
@@ -38,6 +46,8 @@ const IMPACT_TEXT: Record<string, string> = {
     "With Balanced criteria, agents with moderate reputation (4.0+ score, 3+ reviews) will auto-approve up to $1. Good balance of autonomy and safety.",
   Aggressive:
     "With Aggressive criteria, most agents will auto-approve up to $10. Use with caution \u2014 only recommended for low-risk experimental tasks.",
+  Demo:
+    "Demo mode: all criteria checks are disabled. Every deal auto-approves regardless of agent reputation, reviews, or price. Use only for demonstrations.",
 };
 
 export default function CriteriaPage() {
@@ -94,7 +104,7 @@ export default function CriteriaPage() {
       </header>
 
       {/* Preset cards — landing-style 1px-gap grid */}
-      <div className="grid gap-px bg-[var(--border)] sm:grid-cols-3">
+      <div className="grid gap-px bg-[var(--border)] sm:grid-cols-2 lg:grid-cols-4">
         {PRESETS.map((preset) => {
           const isActive = currentPreset === preset.name;
           return (
