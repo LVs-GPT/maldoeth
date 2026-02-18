@@ -92,9 +92,9 @@ export function createDealsRouter(dealService: DealService): Router {
   });
 
   // POST /api/v1/deals/approve/:id
-  router.post("/approve/:id", (req: Request, res: Response, next: NextFunction) => {
+  router.post("/approve/:id", async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = dealService.approveOrReject(parseInt(req.params.id, 10), "approved");
+      const result = await dealService.approveOrReject(parseInt(req.params.id, 10), "approved");
       res.json(result);
     } catch (err) {
       next(err);
@@ -102,9 +102,9 @@ export function createDealsRouter(dealService: DealService): Router {
   });
 
   // POST /api/v1/deals/reject/:id
-  router.post("/reject/:id", (req: Request, res: Response, next: NextFunction) => {
+  router.post("/reject/:id", async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = dealService.approveOrReject(parseInt(req.params.id, 10), "rejected");
+      const result = await dealService.approveOrReject(parseInt(req.params.id, 10), "rejected");
       res.json(result);
     } catch (err) {
       next(err);

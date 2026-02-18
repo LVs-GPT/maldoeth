@@ -312,7 +312,7 @@ export class DealService {
     };
   }
 
-  approveOrReject(approvalId: number, decision: "approved" | "rejected") {
+  async approveOrReject(approvalId: number, decision: "approved" | "rejected") {
     const approval = this.db
       .prepare("SELECT * FROM pending_approvals WHERE id = ? AND status = 'pending'")
       .get(approvalId) as PendingApprovalRow | undefined;
@@ -325,6 +325,29 @@ export class DealService {
 
     if (decision === "approved") {
       const nonce = ethers.hexlify(ethers.randomBytes(32));
+      const totalAmount = BigInt(approval.price_usdc);
+
+      // Look up the server agent's wallet address
+      const agent = this.db
+        .prepare("SELECT wallet FROM agents WHERE agent_id = ?")
+        .get(approval.agent_id) as { wallet: string } | undefined;
+      const serverAddress = agent?.wallet || approval.agent_id;
+
+      let txHash: string | undefined;
+      try {
+        txHash = await this.fundDealOnChain(
+          nonce,
+          approval.principal,
+          serverAddress,
+          totalAmount,
+        );
+      } catch (err) {
+        // Revert approval status so it can be retried
+        this.db
+          .prepare("UPDATE pending_approvals SET status = 'pending' WHERE id = ?")
+          .run(approvalId);
+        throw new ApiError(500, `On-chain funding failed: ${(err as Error).message}`);
+      }
 
       this.db
         .prepare(
@@ -339,7 +362,7 @@ export class DealService {
           approval.task_description || "",
         );
 
-      return { id: approvalId, status: decision, nonce };
+      return { id: approvalId, status: decision, nonce, txHash };
     }
 
     return { id: approvalId, status: decision };
