@@ -1,17 +1,17 @@
 {
-  "name": "maldoeth",
+  "name": "maldo.eth",
   "private": true,
   "version": "0.1.0",
-  "description": "Trust layer for AI agent commerce",
+  "description": "Maldo.eth v0.1 — Trust layer for AI agent commerce on Ethereum",
   "workspaces": [
     "packages/server",
     "packages/dashboard"
   ],
   "scripts": {
     "dev": "npm run dev:server",
-    "dev:server": "npm run dev --workspace=@maldo/server",
-    "dev:dashboard": "npm run dev --workspace=dashboard",
-    "test": "npm run test --workspace=@maldo/server",
+    "dev:server": "npm run dev --workspace=@maldo.eth/server",
+    "dev:dashboard": "npm run dev --workspace=@maldo.eth/dashboard",
+    "test": "npm run test --workspace=@maldo.eth/server",
     "test:contracts": "cd packages/contracts && forge test -vv",
     "build:dashboard": "npm run build --workspace=dashboard",
     "deploy:sepolia": "cd packages/contracts && forge script script/Deploy.s.sol --rpc-url $SEPOLIA_RPC_URL --broadcast --verify",

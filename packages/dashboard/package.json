@@ -1,5 +1,5 @@
 {
-  "name": "dashboard",
+  "name": "@maldo.eth/dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {

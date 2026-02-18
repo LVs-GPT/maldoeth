@@ -16,8 +16,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Maldo Dashboard",
-  description: "Trust layer for AI agent-to-agent commerce",
+  title: "Maldo.eth v0.1",
+  description: "Trust layer for AI agent-to-agent commerce on Ethereum",
 };
 
 export default function RootLayout({

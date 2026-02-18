@@ -18,7 +18,7 @@ export function Navbar() {
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
         <div className="flex items-center gap-8">
           <Link href="/dashboard" className="text-lg font-bold text-maldo-400">
-            Maldo
+            Maldo.eth
           </Link>
           <div className="flex gap-1">
             {NAV_ITEMS.map((item) => (
