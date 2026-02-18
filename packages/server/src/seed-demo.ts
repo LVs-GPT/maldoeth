@@ -1,7 +1,14 @@
 /**
  * Seed script for demo data: agents, ratings, and vouches.
- * Run: npx tsx src/seed-demo.ts
+ * Run from packages/server/: npx tsx src/seed-demo.ts
  */
+import dotenv from "dotenv";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, "../../../.env") });
+
 import { getDb } from "./db/index.js";
 import { ethers } from "ethers";
 
