@@ -1,4 +1,11 @@
-import "dotenv/config";
+import dotenv from "dotenv";
+import { resolve, dirname } from "path";
+import { fileURLToPath } from "url";
+
+// Load .env from monorepo root (two levels up from packages/server/src/)
+const __dirname = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(__dirname, "../../../.env") });
+
 import { createApp } from "./app.js";
 import { getDb } from "./db/index.js";
 import { EscrowEventListener } from "./listeners/escrowEvents.js";
