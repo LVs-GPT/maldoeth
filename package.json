@@ -3,14 +3,18 @@
   "private": true,
   "version": "0.1.0",
   "description": "Trust layer for AI agent commerce",
-  "packageManager": "pnpm@9.0.0",
   "workspaces": [
-    "packages/*"
+    "packages/server",
+    "packages/dashboard"
   ],
   "scripts": {
+    "dev": "npm run dev:server",
+    "dev:server": "npm run dev --workspace=@maldo/server",
+    "dev:dashboard": "npm run dev --workspace=dashboard",
+    "test": "npm run test --workspace=@maldo/server",
     "test:contracts": "cd packages/contracts && forge test -vv",
+    "build:dashboard": "npm run build --workspace=dashboard",
     "deploy:sepolia": "cd packages/contracts && forge script script/Deploy.s.sol --rpc-url $SEPOLIA_RPC_URL --broadcast --verify",
-    "dev:server": "cd packages/server && pnpm dev",
     "lint": "cd packages/contracts && forge fmt --check"
   },
   "dependencies": {

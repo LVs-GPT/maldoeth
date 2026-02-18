@@ -8,6 +8,11 @@ packages/contracts/cache/
 packages/contracts/broadcast/*/31337/
 packages/contracts/.gas-snapshot
 
+# Database
+*.db
+*.db-shm
+*.db-wal
+
 # Node
 node_modules/
 packages/server/dist/
