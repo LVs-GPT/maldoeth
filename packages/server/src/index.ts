@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { createApp } from "./app.js";
 import { getDb } from "./db/index.js";
 import { EscrowEventListener } from "./listeners/escrowEvents.js";
