@@ -9,12 +9,14 @@ import { DiscoveryService } from "./services/discovery.js";
 import { CriteriaService } from "./services/criteria.js";
 import { DealService } from "./services/deals.js";
 import { RatingService } from "./services/rating.js";
+import { VouchService } from "./services/vouch.js";
 
 import { createServicesRouter } from "./routes/services.js";
 import { createCriteriaRouter } from "./routes/criteria.js";
 import { createDealsRouter } from "./routes/deals.js";
 import { createAgentsRouter } from "./routes/agents.js";
 import { createX402Router } from "./routes/x402.js";
+import { createVouchRouter } from "./routes/vouches.js";
 
 export interface AppDeps {
   db: Database.Database;
@@ -35,6 +37,7 @@ export function createApp(deps: AppDeps) {
   const criteriaService = new CriteriaService(deps.db);
   const dealService = new DealService(deps.db, criteriaService);
   const ratingService = new RatingService(deps.db);
+  const vouchService = new VouchService(deps.db);
 
   // Health check
   app.get("/health", (_req: Request, res: Response) => {
@@ -47,6 +50,7 @@ export function createApp(deps: AppDeps) {
   app.use("/api/v1/criteria", createCriteriaRouter(criteriaService));
   app.use("/api/v1/deals", createDealsRouter(dealService));
   app.use("/api/v1/agents", createAgentsRouter(registration, ratingService));
+  app.use("/api/v1/agents", createVouchRouter(vouchService));
   app.use("/x402", createX402Router(deps.db));
 
   // Global error handler
@@ -59,5 +63,5 @@ export function createApp(deps: AppDeps) {
     res.status(500).json({ error: "Internal server error" });
   });
 
-  return { app, registration, discovery, criteriaService, dealService, ratingService };
+  return { app, registration, discovery, criteriaService, dealService, ratingService, vouchService };
 }
