@@ -76,6 +76,17 @@ export async function completeDeal(nonce: string) {
   return fetchApi(`/api/v1/deals/${nonce}/complete`, { method: "POST" });
 }
 
+export async function disputeDeal(nonce: string) {
+  return fetchApi(`/api/v1/deals/${nonce}/dispute`, { method: "POST" });
+}
+
+export async function resolveDispute(nonce: string, ruling: number) {
+  return fetchApi(`/api/v1/deals/${nonce}/resolve`, {
+    method: "POST",
+    body: JSON.stringify({ ruling }),
+  });
+}
+
 export async function rateAgent(agentId: string, body: {
   dealNonce: string;
   raterAddress: string;

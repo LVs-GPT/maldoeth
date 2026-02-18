@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { completeDeal } from "@/lib/api";
+import { completeDeal, disputeDeal, resolveDispute } from "@/lib/api";
 import { RateAgentModal } from "./RateAgentModal";
 
 interface Deal {
@@ -22,6 +22,12 @@ const STATUS_COLORS: Record<string, string> = {
   Refunded: "bg-zinc-500/20 text-zinc-400",
 };
 
+const RULING_OPTIONS = [
+  { value: 1, label: "Buyer wins", description: "Refund USDC to client" },
+  { value: 2, label: "Seller wins", description: "Release USDC to server" },
+  { value: 0, label: "Split", description: "Split equally" },
+];
+
 interface Props {
   deals: Deal[];
   userAddress?: string;
@@ -30,6 +36,9 @@ interface Props {
 
 export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
   const [completing, setCompleting] = useState<string | null>(null);
+  const [disputing, setDisputing] = useState<string | null>(null);
+  const [resolving, setResolving] = useState<string | null>(null);
+  const [showResolveMenu, setShowResolveMenu] = useState<string | null>(null);
   const [ratingDeal, setRatingDeal] = useState<Deal | null>(null);
 
   const handleComplete = async (deal: Deal) => {
@@ -43,6 +52,32 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
       alert(err.message);
     } finally {
       setCompleting(null);
+    }
+  };
+
+  const handleDispute = async (deal: Deal) => {
+    if (!confirm("Open a dispute for this deal? This will freeze the USDC and pay an arbitration fee.")) return;
+    setDisputing(deal.nonce);
+    try {
+      await disputeDeal(deal.nonce);
+      onUpdate?.();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setDisputing(null);
+    }
+  };
+
+  const handleResolve = async (deal: Deal, ruling: number) => {
+    setShowResolveMenu(null);
+    setResolving(deal.nonce);
+    try {
+      await resolveDispute(deal.nonce, ruling);
+      onUpdate?.();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setResolving(null);
     }
   };
 
@@ -91,23 +126,74 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
                   {new Date(deal.created_at).toLocaleDateString()}
                 </td>
                 <td className="px-4 py-2 text-center">
-                  {deal.status === "Funded" && (
-                    <button
-                      onClick={() => handleComplete(deal)}
-                      disabled={completing === deal.nonce}
-                      className="rounded bg-green-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-green-500 disabled:opacity-50"
-                    >
-                      {completing === deal.nonce ? "..." : "Complete"}
-                    </button>
-                  )}
-                  {deal.status === "Completed" && userAddress && (
-                    <button
-                      onClick={() => setRatingDeal(deal)}
-                      className="rounded bg-yellow-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-500"
-                    >
-                      Rate
-                    </button>
-                  )}
+                  <div className="flex items-center justify-center gap-2">
+                    {/* Funded deals: Complete or Dispute */}
+                    {deal.status === "Funded" && (
+                      <>
+                        <button
+                          onClick={() => handleComplete(deal)}
+                          disabled={completing === deal.nonce}
+                          className="rounded bg-green-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-green-500 disabled:opacity-50"
+                        >
+                          {completing === deal.nonce ? "..." : "Complete"}
+                        </button>
+                        <button
+                          onClick={() => handleDispute(deal)}
+                          disabled={disputing === deal.nonce}
+                          className="rounded bg-red-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
+                        >
+                          {disputing === deal.nonce ? "..." : "Dispute"}
+                        </button>
+                      </>
+                    )}
+
+                    {/* Disputed deals: Resolve with ruling options */}
+                    {deal.status === "Disputed" && (
+                      <div className="relative">
+                        <button
+                          onClick={() =>
+                            setShowResolveMenu(
+                              showResolveMenu === deal.nonce ? null : deal.nonce,
+                            )
+                          }
+                          disabled={resolving === deal.nonce}
+                          className="rounded bg-amber-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+                        >
+                          {resolving === deal.nonce ? "..." : "Resolve"}
+                        </button>
+
+                        {/* Ruling dropdown */}
+                        {showResolveMenu === deal.nonce && (
+                          <div className="absolute right-0 z-10 mt-1 w-48 rounded-lg border border-zinc-700 bg-zinc-900 shadow-lg">
+                            {RULING_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.value}
+                                onClick={() => handleResolve(deal, opt.value)}
+                                className="block w-full px-4 py-2 text-left text-xs hover:bg-zinc-800 first:rounded-t-lg last:rounded-b-lg"
+                              >
+                                <span className="font-medium text-zinc-200">
+                                  {opt.label}
+                                </span>
+                                <span className="ml-1 text-zinc-500">
+                                  — {opt.description}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Completed deals: Rate */}
+                    {deal.status === "Completed" && userAddress && (
+                      <button
+                        onClick={() => setRatingDeal(deal)}
+                        className="rounded bg-yellow-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-500"
+                      >
+                        Rate
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
