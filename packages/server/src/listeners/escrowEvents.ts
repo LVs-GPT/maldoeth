@@ -131,17 +131,53 @@ export class EscrowEventListener {
       const fromBlock = Math.max(0, currentBlock - blockCount);
       console.log(`[EventListener] Replaying events from block ${fromBlock} to ${currentBlock}...`);
 
-      const fundedFilter = this.contract.filters.DealFunded();
-      const events = await this.contract.queryFilter(fundedFilter, fromBlock, currentBlock);
+      // Replay ALL event types and process in block order so final status is correct
+      const [funded, completed, disputed, resolved, refunded] = await Promise.all([
+        this.contract.queryFilter(this.contract.filters.DealFunded(), fromBlock, currentBlock),
+        this.contract.queryFilter(this.contract.filters.DealCompleted(), fromBlock, currentBlock),
+        this.contract.queryFilter(this.contract.filters.DisputeInitiated(), fromBlock, currentBlock),
+        this.contract.queryFilter(this.contract.filters.DisputeResolved(), fromBlock, currentBlock),
+        this.contract.queryFilter(this.contract.filters.DealRefunded(), fromBlock, currentBlock),
+      ]);
 
-      for (const event of events) {
-        if ("args" in event && event.args) {
-          const [nonce, dealId, client, server, amount] = event.args;
-          this.upsertDeal(nonce, Number(dealId), client, server, Number(amount), "Funded");
+      // Merge and sort by block number then log index for correct ordering
+      const allEvents = [...funded, ...completed, ...disputed, ...resolved, ...refunded]
+        .sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index);
+
+      for (const event of allEvents) {
+        if (!("args" in event) || !event.args) continue;
+        const name = (event as ethers.EventLog).eventName;
+
+        switch (name) {
+          case "DealFunded": {
+            const [nonce, dealId, client, server, amount] = event.args;
+            this.upsertDeal(nonce, Number(dealId), client, server, Number(amount), "Funded");
+            break;
+          }
+          case "DealCompleted": {
+            const [nonce] = event.args;
+            this.updateDealStatus(nonce, "Completed");
+            break;
+          }
+          case "DisputeInitiated": {
+            const [nonce] = event.args;
+            this.updateDealStatus(nonce, "Disputed");
+            break;
+          }
+          case "DisputeResolved": {
+            const [nonce] = event.args;
+            this.updateDealStatus(nonce, "Completed");
+            break;
+          }
+          case "DealRefunded": {
+            const [nonce] = event.args;
+            this.updateDealStatus(nonce, "Refunded");
+            break;
+          }
         }
       }
 
-      console.log(`[EventListener] Replayed ${events.length} DealFunded events.`);
+      console.log(`[EventListener] Replayed ${allEvents.length} events (${funded.length} funded, ${completed.length} completed, ${disputed.length} disputed, ${resolved.length} resolved, ${refunded.length} refunded).`);
     } catch (err) {
       console.error("[EventListener] Replay failed:", err);
     }
