@@ -47,25 +47,25 @@ export function RateAgentModal({ agentId, agentName, dealNonce, raterAddress, on
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal-content">
-        <h2 className="font-serif text-xl font-semibold text-[var(--text-primary)]">
+        <h2 className="text-base font-bold text-[var(--foreground)]">
           Rate {agentName}
         </h2>
-        <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
+        <p className="mt-1.5 text-[11px] text-[var(--mid)]">
           How was your experience with this agent?
         </p>
 
         <hr className="section-rule my-5" />
 
         {done ? (
-          <div className="rounded-lg border border-maldo-700 bg-maldo-500/5 p-4 animate-fade-in">
-            <p className="text-sm font-medium text-maldo-400">Rating submitted</p>
-            <p className="mt-1 text-xs text-[var(--text-tertiary)]">Reputation updated.</p>
+          <div className="border border-[var(--green-dim)] bg-[rgba(0,232,122,0.05)] p-4 animate-fade-in">
+            <p className="text-sm font-bold text-[var(--green)]">Rating submitted</p>
+            <p className="mt-1 text-[11px] text-[var(--mid)]">Reputation updated.</p>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Star rating */}
             <div>
-              <label className="smallcaps mb-2 block text-xs text-[var(--text-tertiary)]">Rating</label>
+              <label className="mb-2 block text-[11px] text-[var(--mid)] tracking-[0.1em] uppercase">Rating</label>
               <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
@@ -76,15 +76,15 @@ export function RateAgentModal({ agentId, agentName, dealNonce, raterAddress, on
                     onMouseLeave={() => setHoverScore(0)}
                     className={`text-2xl transition-all duration-100 ${
                       star <= displayScore
-                        ? "text-maldo-400 scale-110"
-                        : "text-[var(--border)] hover:text-[var(--text-tertiary)]"
+                        ? "text-[var(--green)] scale-110"
+                        : "text-[var(--dim)] hover:text-[var(--mid)]"
                     }`}
                   >
                     {star <= displayScore ? "\u2605" : "\u2606"}
                   </button>
                 ))}
                 {displayScore > 0 && (
-                  <span className="ml-3 font-mono text-xs tabular-nums text-[var(--text-tertiary)]">
+                  <span className="ml-3 text-[11px] tabular-nums text-[var(--mid)]">
                     {displayScore}/5
                   </span>
                 )}
@@ -93,8 +93,8 @@ export function RateAgentModal({ agentId, agentName, dealNonce, raterAddress, on
 
             {/* Comment */}
             <div>
-              <label className="smallcaps mb-2 block text-xs text-[var(--text-tertiary)]">
-                Comment <span className="font-normal not-italic text-[var(--text-tertiary)]">(optional)</span>
+              <label className="mb-2 block text-[11px] text-[var(--mid)] tracking-[0.1em] uppercase">
+                Comment <span className="normal-case text-[var(--dim)]">(optional)</span>
               </label>
               <textarea
                 value={comment}
@@ -106,7 +106,7 @@ export function RateAgentModal({ agentId, agentName, dealNonce, raterAddress, on
             </div>
 
             {error && (
-              <p className="text-xs text-red-400">{error}</p>
+              <p className="text-[11px] text-[var(--red)]">{error}</p>
             )}
 
             <div className="flex gap-3">

@@ -16,10 +16,10 @@ interface Deal {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  Funded: "border-blue-900/40 bg-blue-500/5 text-blue-400",
-  Completed: "border-maldo-800 bg-maldo-500/5 text-maldo-400",
-  Disputed: "border-red-900/40 bg-red-500/5 text-red-400",
-  Refunded: "border-[var(--border)] bg-[var(--surface)] text-[var(--text-tertiary)]",
+  Funded: "border-[rgba(68,136,255,0.3)] text-[var(--blue)]",
+  Completed: "border-[var(--green-dim)] text-[var(--green)]",
+  Disputed: "border-[rgba(255,68,68,0.3)] text-[var(--red)]",
+  Refunded: "border-[var(--dim)] text-[var(--mid)]",
 };
 
 const RULING_OPTIONS = [
@@ -82,11 +82,11 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
 
   if (deals.length === 0) {
     return (
-      <div className="card p-10 text-center">
-        <p className="font-serif text-base text-[var(--text-tertiary)]">
+      <div className="bg-[var(--surface)] border border-[var(--border)] p-10 text-center">
+        <p className="text-sm text-[var(--mid)]">
           No deals yet
         </p>
-        <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+        <p className="mt-1 text-[11px] text-[var(--dim)]">
           Hire an agent to get started.
         </p>
       </div>
@@ -95,7 +95,7 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
 
   return (
     <>
-      <div className="card overflow-hidden">
+      <div className="border border-[var(--border)] overflow-hidden">
         <table className="data-table">
           <thead>
             <tr>
@@ -110,13 +110,13 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
           <tbody>
             {deals.map((deal) => (
               <tr key={deal.nonce}>
-                <td className="font-mono text-xs tabular-nums text-[var(--text-secondary)]">
+                <td className="text-xs tabular-nums text-[var(--mid)]">
                   {deal.nonce.slice(0, 10)}&hellip;
                 </td>
-                <td className="font-mono text-xs tabular-nums text-[var(--text-secondary)]">
+                <td className="text-xs tabular-nums text-[var(--mid)]">
                   {deal.server.slice(0, 10)}&hellip;
                 </td>
-                <td className="text-right font-mono text-sm tabular-nums text-[var(--text-primary)]">
+                <td className="text-right text-sm tabular-nums text-[var(--foreground)]">
                   ${(deal.amount / 1e6).toFixed(2)}
                 </td>
                 <td className="text-center">
@@ -124,7 +124,7 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
                     {deal.status}
                   </span>
                 </td>
-                <td className="font-mono text-xs tabular-nums text-[var(--text-tertiary)]">
+                <td className="text-xs tabular-nums text-[var(--dim)]">
                   {new Date(deal.created_at).toLocaleDateString()}
                 </td>
                 <td className="text-center">
@@ -163,17 +163,17 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
                         </button>
 
                         {showResolveMenu === deal.nonce && (
-                          <div className="absolute right-0 z-10 mt-2 w-52 rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-xl animate-fade-in">
+                          <div className="absolute right-0 z-10 mt-2 w-52 border border-[var(--border)] bg-[var(--surface)] shadow-xl animate-fade-in">
                             {RULING_OPTIONS.map((opt) => (
                               <button
                                 key={opt.value}
                                 onClick={() => handleResolve(deal, opt.value)}
-                                className="block w-full px-4 py-2.5 text-left text-xs transition-colors hover:bg-[var(--surface-raised)] first:rounded-t-lg last:rounded-b-lg"
+                                className="block w-full px-4 py-2.5 text-left text-xs transition-colors hover:bg-[var(--surface-raised)]"
                               >
-                                <span className="font-medium text-[var(--text-primary)]">
+                                <span className="font-bold text-[var(--foreground)]">
                                   {opt.label}
                                 </span>
-                                <span className="ml-1.5 text-[var(--text-tertiary)]">
+                                <span className="ml-1.5 text-[var(--mid)]">
                                   &mdash; {opt.description}
                                 </span>
                               </button>

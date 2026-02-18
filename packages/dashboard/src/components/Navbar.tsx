@@ -14,36 +14,31 @@ export function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="border-b border-[var(--border)]">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4 sm:px-8 lg:px-12">
+    <nav className="fixed top-0 left-0 right-0 z-[100] border-b border-[var(--border)] bg-[rgba(8,8,8,0.85)] backdrop-blur-[12px]">
+      <div className="mx-auto flex max-w-[980px] items-center justify-between px-6 py-4 sm:px-8">
         {/* Logo */}
-        <div className="flex items-center gap-10">
-          <Link href="/dashboard" className="group flex items-baseline gap-1.5">
-            <span className="font-serif text-xl font-semibold tracking-tight text-[var(--text-primary)]">
-              Maldo
-            </span>
-            <span className="font-serif text-xl font-light italic text-maldo-500">
-              .eth
-            </span>
+        <div className="flex items-center gap-8">
+          <Link href="/dashboard" className="text-sm font-bold tracking-[0.05em] text-[var(--green)] hover:text-[var(--foreground)] transition-colors">
+            maldo<span className="font-normal text-[var(--mid)]">.eth</span>
           </Link>
 
           {/* Nav links */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-6">
             {NAV_ITEMS.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative px-3 py-1 text-[0.8rem] tracking-wide transition-colors ${
+                  className={`text-xs tracking-[0.05em] transition-colors ${
                     isActive
-                      ? "text-[var(--text-primary)]"
-                      : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                      ? "text-[var(--foreground)]"
+                      : "text-[var(--mid)] hover:text-[var(--foreground)]"
                   }`}
                 >
-                  <span className="smallcaps">{item.label}</span>
+                  {item.label}
                   {isActive && (
-                    <span className="absolute bottom-0 left-3 right-3 h-px bg-maldo-500" />
+                    <span className="block h-[2px] mt-1 bg-[var(--green)]" />
                   )}
                 </Link>
               );
@@ -53,9 +48,9 @@ export function Navbar() {
 
         {/* Right side */}
         <div className="flex items-center gap-4">
-          <span className="tag border-maldo-800 bg-maldo-500/8 text-maldo-400 text-2xs">
-            <span className="status-dot bg-maldo-500 status-dot-live mr-1.5" />
-            Sepolia
+          <span className="tag border-[var(--green-dim)] text-[var(--green)] text-[10px] tracking-[0.1em]">
+            <span className="status-dot bg-[var(--green)] status-dot-live mr-1.5" style={{ boxShadow: '0 0 6px var(--green)' }} />
+            SEPOLIA
           </span>
           <ConnectButton
             accountStatus="address"

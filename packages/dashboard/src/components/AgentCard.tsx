@@ -18,9 +18,9 @@ interface AgentProps {
 }
 
 const BADGE_COLORS: Record<string, string> = {
-  "50-deals": "border-purple-800 bg-purple-500/5 text-purple-400",
-  "100-deals": "border-maldo-800 bg-maldo-500/5 text-maldo-400",
-  "zero-disputes-streak": "border-emerald-800 bg-emerald-500/5 text-emerald-400",
+  "50-deals": "border-[rgba(168,85,247,0.3)] text-[#a855f7]",
+  "100-deals": "border-[var(--green-dim)] text-[var(--green)]",
+  "zero-disputes-streak": "border-[rgba(16,185,129,0.3)] text-[#10b981]",
 };
 
 export function AgentCard({ agent }: { agent: AgentProps }) {
@@ -31,25 +31,25 @@ export function AgentCard({ agent }: { agent: AgentProps }) {
 
   const scoreColor =
     score >= 4.5
-      ? "text-maldo-400"
+      ? "text-[var(--green)]"
       : score >= 3.5
-        ? "text-amber-400"
+        ? "text-[var(--yellow)]"
         : score > 0
-          ? "text-red-400"
-          : "text-[var(--text-tertiary)]";
+          ? "text-[var(--red)]"
+          : "text-[var(--dim)]";
 
   return (
     <Link
       href={`/agents/${agent.agentId}`}
-      className="card group block p-5"
+      className="group block bg-[var(--bg)] p-6 transition-colors hover:bg-[var(--bg2)]"
     >
       {/* Header */}
       <div className="mb-3 flex items-start justify-between">
-        <h3 className="font-serif text-base font-semibold text-[var(--text-primary)] group-hover:text-maldo-400 transition-colors">
+        <h3 className="text-[13px] font-bold text-[var(--foreground)] group-hover:text-[var(--green)] transition-colors">
           {agent.name}
         </h3>
         <div className="text-right">
-          <span className={`font-mono text-lg font-semibold tabular-nums ${scoreColor}`}>
+          <span className={`text-lg font-bold tabular-nums ${scoreColor}`}>
             {score > 0 ? score.toFixed(1) : "\u2014"}
           </span>
         </div>
@@ -60,7 +60,7 @@ export function AgentCard({ agent }: { agent: AgentProps }) {
         {agent.capabilities.map((cap) => (
           <span
             key={cap}
-            className="tag border-[var(--border)] text-[var(--text-tertiary)]"
+            className="tag border-[var(--dim)] text-[var(--mid)]"
           >
             {cap}
           </span>
@@ -68,13 +68,13 @@ export function AgentCard({ agent }: { agent: AgentProps }) {
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
-        <span className="text-xs text-[var(--text-tertiary)]">
+      <div className="flex items-center justify-between border-t border-[var(--border)] pt-3">
+        <span className="text-[11px] text-[var(--mid)]">
           {reviewCount > 0
             ? `${reviewCount} review${reviewCount !== 1 ? "s" : ""}`
             : "No reviews"}
         </span>
-        <span className="font-mono text-sm tabular-nums text-[var(--text-secondary)]">
+        <span className="text-sm tabular-nums text-[var(--foreground)]">
           ${(agent.basePrice / 1e6).toFixed(2)}
         </span>
       </div>
@@ -85,7 +85,7 @@ export function AgentCard({ agent }: { agent: AgentProps }) {
           {badges.map((badge) => (
             <span
               key={badge}
-              className={`tag ${BADGE_COLORS[badge] || "border-[var(--border)] text-[var(--text-tertiary)]"}`}
+              className={`tag ${BADGE_COLORS[badge] || "border-[var(--dim)] text-[var(--mid)]"}`}
             >
               {badge}
             </span>

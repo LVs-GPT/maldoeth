@@ -4,11 +4,6 @@ import "./globals.css";
 import { Providers } from "@/components/Providers";
 import { Navbar } from "@/components/Navbar";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",
   variable: "--font-geist-mono",
@@ -28,20 +23,30 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased`}
-        style={{ "--font-serif": "Georgia, 'Cambria', 'Times New Roman', serif" } as React.CSSProperties}
+        className={`${geistMono.variable} min-h-screen antialiased`}
       >
         <Providers>
+          <div className="grid-bg" />
           <Navbar />
-          <main className="mx-auto max-w-5xl px-6 py-10 sm:px-8 lg:px-12">
+          <main className="relative z-[1] mx-auto max-w-[980px] px-6 py-10 sm:px-8">
             {children}
           </main>
-          <footer className="mt-20 border-t border-[var(--border)]">
-            <div className="mx-auto max-w-5xl px-6 py-6 sm:px-8 lg:px-12">
-              <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)]">
-                <span className="font-serif italic">Maldo.eth</span>
-                <span>Trust layer for AI agent commerce &middot; Sepolia</span>
+          <footer className="relative z-[1] border-t border-[var(--border)]">
+            <div className="mx-auto max-w-[980px] px-6 py-12 sm:px-8">
+              <div className="flex items-center justify-between flex-wrap gap-6">
+                <div className="flex flex-col gap-2">
+                  <span className="text-sm font-bold text-[var(--green)]">maldo.eth</span>
+                  <span className="text-[11px] text-[var(--mid)]">Trust layer for agentic commerce &middot; ERC-8004 &middot; x402 &middot; Kleros</span>
+                </div>
+                <div className="flex gap-6 flex-wrap">
+                  <a href="https://github.com/maldouy" target="_blank" rel="noopener" className="text-xs text-[var(--mid)] hover:text-[var(--foreground)] transition-colors">GitHub</a>
+                  <a href="https://sepolia.etherscan.io" target="_blank" rel="noopener" className="text-xs text-[var(--mid)] hover:text-[var(--foreground)] transition-colors">Etherscan</a>
+                  <a href="https://www.x402.org" target="_blank" rel="noopener" className="text-xs text-[var(--mid)] hover:text-[var(--foreground)] transition-colors">x402</a>
+                </div>
               </div>
+              <p className="mt-6 text-[10px] text-[var(--dim)] tracking-wide">
+                Sepolia testnet &middot; 1% fee &middot; 5% max hardcoded &middot; No native token &middot; Open standards
+              </p>
             </div>
           </footer>
         </Providers>

@@ -69,13 +69,11 @@ export default function AgentsPage() {
   };
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 pt-16">
       {/* Header */}
       <header>
-        <h1 className="font-serif text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
-          Discover Agents
-        </h1>
-        <p className="dropcap mt-3 text-sm leading-relaxed text-[var(--text-tertiary)]">
+        <div className="section-label">Discover Agents</div>
+        <p className="mt-2 text-[13px] text-[var(--mid)] leading-[1.7] max-w-[580px]">
           All ERC-8004 registered agents on Sepolia. Filter by capability or browse the full registry.
         </p>
       </header>
@@ -104,8 +102,8 @@ export default function AgentsPage() {
           onClick={handleShowAll}
           className={`tag cursor-pointer transition-colors ${
             activeFilter === null
-              ? "border-maldo-700 bg-maldo-500/8 text-maldo-400"
-              : "border-[var(--border)] text-[var(--text-tertiary)] hover:border-maldo-700 hover:text-maldo-400"
+              ? "border-[var(--green)] text-[var(--green)]"
+              : "border-[var(--dim)] text-[var(--mid)] hover:border-[var(--green)] hover:text-[var(--green)]"
           }`}
         >
           All agents
@@ -116,8 +114,8 @@ export default function AgentsPage() {
             onClick={() => handleFilter(cap)}
             className={`tag cursor-pointer transition-colors ${
               activeFilter === cap
-                ? "border-maldo-700 bg-maldo-500/8 text-maldo-400"
-                : "border-[var(--border)] text-[var(--text-tertiary)] hover:border-maldo-700 hover:text-maldo-400"
+                ? "border-[var(--green)] text-[var(--green)]"
+                : "border-[var(--dim)] text-[var(--mid)] hover:border-[var(--green)] hover:text-[var(--green)]"
             }`}
           >
             {cap}
@@ -129,22 +127,22 @@ export default function AgentsPage() {
 
       {/* Results */}
       <div>
-        <p className="mb-4 text-xs text-[var(--text-tertiary)]">
+        <p className="mb-4 text-[11px] text-[var(--mid)]">
           {loading
             ? "Loading\u2026"
             : `${agents.length} agent${agents.length !== 1 ? "s" : ""} ${activeFilter ? `matching \u201c${activeFilter}\u201d` : "registered on Sepolia"}`}
         </p>
 
         {!loading && agents.length === 0 ? (
-          <div className="card p-10 text-center">
-            <p className="font-serif text-base text-[var(--text-tertiary)]">
+          <div className="bg-[var(--surface)] border border-[var(--border)] p-10 text-center">
+            <p className="text-sm text-[var(--mid)]">
               {activeFilter
                 ? `No agents found with capability \u201c${activeFilter}\u201d`
                 : "No agents registered yet"}
             </p>
           </div>
         ) : !loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-px bg-[var(--border)] sm:grid-cols-2 lg:grid-cols-3">
             {agents.map((agent: any) => (
               <AgentCard key={agent.agentId} agent={agent} />
             ))}

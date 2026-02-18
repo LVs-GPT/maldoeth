@@ -46,12 +46,12 @@ export function HireAgentModal({ agentId, agentName, basePrice, clientAddress, o
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal-content">
-        <h2 className="font-serif text-xl font-semibold text-[var(--text-primary)]">
+        <h2 className="text-base font-bold text-[var(--foreground)]">
           Hire {agentName}
         </h2>
-        <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
-          Price: <span className="font-mono text-[var(--text-secondary)]">${(basePrice / 1e6).toFixed(2)}</span> USDC
-          <span className="ml-1 text-[var(--text-tertiary)]">&middot; Sepolia testnet</span>
+        <p className="mt-1.5 text-[11px] text-[var(--mid)]">
+          Price: <span className="text-[var(--foreground)]">${(basePrice / 1e6).toFixed(2)}</span> USDC
+          <span className="ml-1 text-[var(--dim)]">&middot; Sepolia testnet</span>
         </p>
 
         <hr className="section-rule my-5" />
@@ -60,12 +60,12 @@ export function HireAgentModal({ agentId, agentName, basePrice, clientAddress, o
           <div className="animate-fade-in space-y-4">
             {result.requiresHumanApproval ? (
               <>
-                <div className="rounded-lg border border-amber-700/30 bg-amber-500/5 p-4">
-                  <p className="text-sm font-medium text-amber-400">Requires approval</p>
-                  <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
-                    Criteria flagged: <span className="text-amber-400/80">{result.failedChecks?.join(", ")}</span>
+                <div className="border border-[rgba(255,204,0,0.3)] bg-[rgba(255,204,0,0.05)] p-4">
+                  <p className="text-sm font-bold text-[var(--yellow)]">Requires approval</p>
+                  <p className="mt-1.5 text-[11px] text-[var(--mid)]">
+                    Criteria flagged: <span className="text-[var(--yellow)]">{result.failedChecks?.join(", ")}</span>
                   </p>
-                  <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                  <p className="mt-1 text-[11px] text-[var(--mid)]">
                     Go to Dashboard to approve or reject this deal.
                   </p>
                 </div>
@@ -74,9 +74,9 @@ export function HireAgentModal({ agentId, agentName, basePrice, clientAddress, o
                 </button>
               </>
             ) : (
-              <div className="rounded-lg border border-maldo-700 bg-maldo-500/5 p-4">
-                <p className="text-sm font-medium text-maldo-400">Deal created</p>
-                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+              <div className="border border-[var(--green-dim)] bg-[rgba(0,232,122,0.05)] p-4">
+                <p className="text-sm font-bold text-[var(--green)]">Deal created</p>
+                <p className="mt-1 text-[11px] text-[var(--mid)]">
                   Auto-approved by your criteria. Redirecting&hellip;
                 </p>
               </div>
@@ -85,7 +85,7 @@ export function HireAgentModal({ agentId, agentName, basePrice, clientAddress, o
         ) : (
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="smallcaps mb-2 block text-xs text-[var(--text-tertiary)]">
+              <label className="mb-2 block text-[11px] text-[var(--mid)] tracking-[0.1em] uppercase">
                 Task description
               </label>
               <textarea
@@ -99,7 +99,7 @@ export function HireAgentModal({ agentId, agentName, basePrice, clientAddress, o
             </div>
 
             {error && (
-              <p className="text-xs text-red-400">{error}</p>
+              <p className="text-[11px] text-[var(--red)]">{error}</p>
             )}
 
             <div className="flex gap-3">
@@ -111,7 +111,7 @@ export function HireAgentModal({ agentId, agentName, basePrice, clientAddress, o
                 disabled={loading || !taskDescription.trim()}
                 className="btn btn-primary flex-1"
               >
-                {loading ? "Creating deal\u2026" : "Hire & Pay"}
+                {loading ? "Creating deal\u2026" : "Hire & Pay \u2192"}
               </button>
             </div>
           </form>

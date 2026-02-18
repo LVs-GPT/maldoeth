@@ -45,14 +45,14 @@ export function PendingApprovalCard({
   };
 
   return (
-    <div className="card border-amber-900/40 p-5">
+    <div className="bg-[var(--bg)] p-6 hover:bg-[var(--bg2)] transition-colors">
       {/* Header */}
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="status-dot bg-amber-400 status-dot-live" />
-          <span className="smallcaps text-xs font-medium text-amber-400">Pending Approval</span>
+          <span className="status-dot bg-[var(--yellow)]" style={{ boxShadow: '0 0 6px var(--yellow)' }} />
+          <span className="text-[11px] font-bold tracking-[0.1em] uppercase text-[var(--yellow)]">Pending</span>
         </div>
-        <span className="font-mono text-2xs tabular-nums text-[var(--text-tertiary)]">
+        <span className="text-[11px] tabular-nums text-[var(--dim)]">
           {new Date(approval.created_at).toLocaleString()}
         </span>
       </div>
@@ -60,15 +60,15 @@ export function PendingApprovalCard({
       {/* Details */}
       <div className="mb-4 space-y-1.5">
         <div className="flex items-baseline justify-between">
-          <span className="text-sm text-[var(--text-primary)]">
+          <span className="text-[13px] text-[var(--foreground)]">
             {approval.agent_name || approval.agent_id}
           </span>
-          <span className="font-mono text-sm tabular-nums text-[var(--text-secondary)]">
+          <span className="text-[13px] tabular-nums text-[var(--foreground)]">
             ${(approval.price_usdc / 1e6).toFixed(2)}
           </span>
         </div>
         {approval.task_description && (
-          <p className="text-xs leading-relaxed text-[var(--text-tertiary)] line-clamp-2">
+          <p className="text-[11px] leading-[1.7] text-[var(--mid)] line-clamp-2">
             {approval.task_description}
           </p>
         )}
@@ -80,7 +80,7 @@ export function PendingApprovalCard({
           {failedChecks.map((check) => (
             <span
               key={check}
-              className="tag border-red-900/40 bg-red-500/5 text-red-400"
+              className="tag border-[rgba(255,68,68,0.3)] text-[var(--red)]"
             >
               {check}
             </span>

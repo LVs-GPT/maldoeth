@@ -7,21 +7,24 @@ import { getCriteria, setCriteria } from "@/lib/api";
 const PRESETS = [
   {
     name: "Conservative",
-    description: "High trust bar. Only established agents auto-approve. Best for high-value operations.",
+    color: "var(--blue)",
+    description: "High trust bar. Only established agents auto-approve.",
     minReputation: 480,
     minReviewCount: 5,
     maxPriceUSDC: 100_000,
   },
   {
     name: "Balanced",
-    description: "Moderate trust bar. Good balance of autonomy and safety. Recommended for most use cases.",
+    color: "var(--green)",
+    description: "Moderate trust bar. Recommended for most use cases.",
     minReputation: 400,
     minReviewCount: 3,
     maxPriceUSDC: 1_000_000,
   },
   {
     name: "Aggressive",
-    description: "Low trust bar. Maximum autonomy. Only use for low-risk or experimental operations.",
+    color: "var(--yellow)",
+    description: "Low trust bar. Maximum autonomy. Only for low-risk ops.",
     minReputation: 300,
     minReviewCount: 1,
     maxPriceUSDC: 10_000_000,
@@ -72,7 +75,7 @@ export default function CriteriaPage() {
   if (!isConnected) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24">
-        <p className="font-serif text-base text-[var(--text-tertiary)]">
+        <p className="text-sm text-[var(--mid)]">
           Connect your wallet to manage criteria.
         </p>
       </div>
@@ -80,20 +83,18 @@ export default function CriteriaPage() {
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 pt-16">
       {/* Header */}
       <header>
-        <h1 className="font-serif text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
-          Agentic Criteria
-        </h1>
-        <p className="dropcap mt-3 text-sm leading-relaxed text-[var(--text-tertiary)]">
+        <div className="section-label">Agentic Criteria</div>
+        <p className="mt-2 text-[13px] text-[var(--mid)] leading-[1.7] max-w-[580px]">
           Configure trust boundaries for your autonomous agents. Deals that fail these
           criteria require your manual approval.
         </p>
       </header>
 
-      {/* Preset selector */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      {/* Preset cards — landing-style 1px-gap grid */}
+      <div className="grid gap-px bg-[var(--border)] sm:grid-cols-3">
         {PRESETS.map((preset) => {
           const isActive = currentPreset === preset.name;
           return (
@@ -101,33 +102,28 @@ export default function CriteriaPage() {
               key={preset.name}
               onClick={() => handleSave(preset.name)}
               disabled={saving}
-              className={`card p-5 text-left transition-all disabled:opacity-50 ${
-                isActive
-                  ? "!border-maldo-700 !bg-maldo-500/5"
-                  : "hover:!border-[#2a2a2a]"
+              className={`bg-[var(--bg)] p-6 text-left transition-all disabled:opacity-50 hover:bg-[var(--bg2)] ${
+                isActive ? "!border-l-2 !border-l-[var(--green)]" : ""
               }`}
             >
-              <div className="mb-2 flex items-center gap-2.5">
-                <span
-                  className={`status-dot ${
-                    isActive ? "bg-maldo-400 status-dot-live" : "bg-[var(--text-tertiary)]"
-                  }`}
-                />
+              <div className="mb-3 flex items-center gap-2">
+                {isActive && (
+                  <span className="status-dot bg-[var(--green)]" style={{ boxShadow: '0 0 6px var(--green)' }} />
+                )}
                 <h3
-                  className={`font-serif text-base font-semibold ${
-                    isActive ? "text-maldo-400" : "text-[var(--text-primary)]"
-                  }`}
+                  className="text-[13px] font-bold"
+                  style={{ color: isActive ? preset.color : 'var(--foreground)' }}
                 >
                   {preset.name}
                 </h3>
               </div>
 
-              <p className="mb-4 text-xs leading-relaxed text-[var(--text-tertiary)]">
+              <p className="mb-4 text-[11px] text-[var(--mid)] leading-[1.7]">
                 {preset.description}
               </p>
 
-              <div className="space-y-1.5 border-t border-[var(--border-subtle)] pt-3">
-                <CriteriaRow label="Min reputation" value={(preset.minReputation / 100).toFixed(1)} />
+              <div className="space-y-1 border-t border-[var(--border)] pt-3">
+                <CriteriaRow label="Min reputation" value={(preset.minReputation / 100).toFixed(1) + " \u2605"} />
                 <CriteriaRow label="Min reviews" value={String(preset.minReviewCount)} />
                 <CriteriaRow label="Max price" value={`$${(preset.maxPriceUSDC / 1e6).toFixed(2)}`} />
               </div>
@@ -137,7 +133,7 @@ export default function CriteriaPage() {
       </div>
 
       {saved && (
-        <p className="animate-fade-in text-sm text-maldo-400">Criteria updated successfully.</p>
+        <p className="animate-fade-in text-xs text-[var(--green)]">Criteria updated successfully.</p>
       )}
 
       <hr className="section-rule" />
@@ -145,10 +141,8 @@ export default function CriteriaPage() {
       {/* Current config */}
       {criteriaData && (
         <section>
-          <h2 className="section-header mb-5 text-base text-[var(--text-secondary)]">
-            Current Configuration
-          </h2>
-          <div className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--border)] sm:grid-cols-4">
+          <div className="section-label">Current Configuration</div>
+          <div className="grid grid-cols-2 gap-px overflow-hidden border border-[var(--border)] bg-[var(--border)] sm:grid-cols-4">
             <ConfigCell label="Preset" value={criteriaData.preset} />
             <ConfigCell label="Min Reputation" value={(criteriaData.minReputation / 100).toFixed(1)} />
             <ConfigCell label="Min Reviews" value={criteriaData.minReviewCount} />
@@ -158,11 +152,9 @@ export default function CriteriaPage() {
       )}
 
       {/* Impact preview */}
-      <section className="card p-6">
-        <h2 className="section-header mb-4 text-base text-[var(--text-secondary)]">
-          Impact Preview
-        </h2>
-        <p className="text-sm leading-relaxed text-[var(--text-tertiary)]">
+      <section className="bg-[var(--surface)] border border-[var(--border)] p-7">
+        <div className="section-label">Impact Preview</div>
+        <p className="text-[13px] text-[var(--mid)] leading-[1.7]">
           {IMPACT_TEXT[currentPreset]}
         </p>
       </section>
@@ -172,18 +164,18 @@ export default function CriteriaPage() {
 
 function CriteriaRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between">
-      <span className="text-2xs text-[var(--text-tertiary)]">{label}</span>
-      <span className="font-mono text-xs tabular-nums text-[var(--text-secondary)]">{value}</span>
+    <div className="flex items-baseline justify-between py-1 border-b border-[var(--border)] last:border-b-0">
+      <span className="text-[11px] text-[var(--mid)]">{label}</span>
+      <span className="text-[11px] tabular-nums text-[var(--foreground)]">{value}</span>
     </div>
   );
 }
 
 function ConfigCell({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-[var(--surface)] px-5 py-4">
-      <p className="smallcaps text-2xs text-[var(--text-tertiary)]">{label}</p>
-      <p className="mt-1 font-mono text-sm font-medium tabular-nums text-[var(--text-primary)]">
+    <div className="bg-[var(--bg)] p-7">
+      <p className="text-[11px] text-[var(--mid)] tracking-[0.05em]">{label}</p>
+      <p className="mt-2 text-sm font-bold tabular-nums text-[var(--foreground)]">
         {String(value)}
       </p>
     </div>
