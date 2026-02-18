@@ -1,5 +1,9 @@
 "use client";
 
+import { useState } from "react";
+import { completeDeal } from "@/lib/api";
+import { RateAgentModal } from "./RateAgentModal";
+
 interface Deal {
   nonce: string;
   deal_id: number;
@@ -18,7 +22,30 @@ const STATUS_COLORS: Record<string, string> = {
   Refunded: "bg-zinc-500/20 text-zinc-400",
 };
 
-export function DealStatusTable({ deals }: { deals: Deal[] }) {
+interface Props {
+  deals: Deal[];
+  userAddress?: string;
+  onUpdate?: () => void;
+}
+
+export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
+  const [completing, setCompleting] = useState<string | null>(null);
+  const [ratingDeal, setRatingDeal] = useState<Deal | null>(null);
+
+  const handleComplete = async (deal: Deal) => {
+    setCompleting(deal.nonce);
+    try {
+      await completeDeal(deal.nonce);
+      // Show rate modal after completing
+      setRatingDeal(deal);
+      onUpdate?.();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setCompleting(null);
+    }
+  };
+
   if (deals.length === 0) {
     return (
       <div className="rounded-lg border border-zinc-800 p-8 text-center text-zinc-500">
@@ -28,43 +55,80 @@ export function DealStatusTable({ deals }: { deals: Deal[] }) {
   }
 
   return (
-    <div className="overflow-hidden rounded-lg border border-zinc-800">
-      <table className="w-full text-sm">
-        <thead className="bg-zinc-900 text-zinc-400">
-          <tr>
-            <th className="px-4 py-2 text-left font-medium">Nonce</th>
-            <th className="px-4 py-2 text-left font-medium">Server</th>
-            <th className="px-4 py-2 text-right font-medium">Amount</th>
-            <th className="px-4 py-2 text-center font-medium">Status</th>
-            <th className="px-4 py-2 text-left font-medium">Date</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-zinc-800">
-          {deals.map((deal) => (
-            <tr key={deal.nonce} className="hover:bg-zinc-900/50">
-              <td className="px-4 py-2 font-mono text-xs text-zinc-300">
-                {deal.nonce.slice(0, 10)}...
-              </td>
-              <td className="px-4 py-2 font-mono text-xs text-zinc-300">
-                {deal.server.slice(0, 10)}...
-              </td>
-              <td className="px-4 py-2 text-right text-zinc-200">
-                ${(deal.amount / 1e6).toFixed(2)}
-              </td>
-              <td className="px-4 py-2 text-center">
-                <span
-                  className={`rounded-full px-2 py-0.5 text-xs ${STATUS_COLORS[deal.status] || "bg-zinc-500/20 text-zinc-400"}`}
-                >
-                  {deal.status}
-                </span>
-              </td>
-              <td className="px-4 py-2 text-xs text-zinc-500">
-                {new Date(deal.created_at).toLocaleDateString()}
-              </td>
+    <>
+      <div className="overflow-hidden rounded-lg border border-zinc-800">
+        <table className="w-full text-sm">
+          <thead className="bg-zinc-900 text-zinc-400">
+            <tr>
+              <th className="px-4 py-2 text-left font-medium">Nonce</th>
+              <th className="px-4 py-2 text-left font-medium">Server</th>
+              <th className="px-4 py-2 text-right font-medium">Amount</th>
+              <th className="px-4 py-2 text-center font-medium">Status</th>
+              <th className="px-4 py-2 text-left font-medium">Date</th>
+              <th className="px-4 py-2 text-center font-medium">Actions</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody className="divide-y divide-zinc-800">
+            {deals.map((deal) => (
+              <tr key={deal.nonce} className="hover:bg-zinc-900/50">
+                <td className="px-4 py-2 font-mono text-xs text-zinc-300">
+                  {deal.nonce.slice(0, 10)}...
+                </td>
+                <td className="px-4 py-2 font-mono text-xs text-zinc-300">
+                  {deal.server.slice(0, 10)}...
+                </td>
+                <td className="px-4 py-2 text-right text-zinc-200">
+                  ${(deal.amount / 1e6).toFixed(2)}
+                </td>
+                <td className="px-4 py-2 text-center">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-xs ${STATUS_COLORS[deal.status] || "bg-zinc-500/20 text-zinc-400"}`}
+                  >
+                    {deal.status}
+                  </span>
+                </td>
+                <td className="px-4 py-2 text-xs text-zinc-500">
+                  {new Date(deal.created_at).toLocaleDateString()}
+                </td>
+                <td className="px-4 py-2 text-center">
+                  {deal.status === "Funded" && (
+                    <button
+                      onClick={() => handleComplete(deal)}
+                      disabled={completing === deal.nonce}
+                      className="rounded bg-green-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-green-500 disabled:opacity-50"
+                    >
+                      {completing === deal.nonce ? "..." : "Complete"}
+                    </button>
+                  )}
+                  {deal.status === "Completed" && userAddress && (
+                    <button
+                      onClick={() => setRatingDeal(deal)}
+                      className="rounded bg-yellow-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-500"
+                    >
+                      Rate
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Rate modal */}
+      {ratingDeal && userAddress && (
+        <RateAgentModal
+          agentId={ratingDeal.server}
+          agentName={ratingDeal.server.slice(0, 10) + "..."}
+          dealNonce={ratingDeal.nonce}
+          raterAddress={userAddress}
+          onSuccess={() => {
+            setRatingDeal(null);
+            onUpdate?.();
+          }}
+          onClose={() => setRatingDeal(null)}
+        />
+      )}
+    </>
   );
 }

@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAccount } from "wagmi";
 import { getAgent, getAgentReputation, getAgentRatings, getAgentVouches } from "@/lib/api";
+import { HireAgentModal } from "@/components/HireAgentModal";
 
 export default function AgentProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const agentId = params.id as string;
+  const { address, isConnected } = useAccount();
 
   const [agent, setAgent] = useState<any>(null);
   const [reputation, setReputation] = useState<any>(null);
@@ -15,6 +19,7 @@ export default function AgentProfilePage() {
   const [vouches, setVouches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showHireModal, setShowHireModal] = useState(false);
 
   useEffect(() => {
     if (!agentId) return;
@@ -76,13 +81,38 @@ export default function AgentProfilePage() {
           <p className="text-sm text-zinc-500">{agent.description || "No description"}</p>
           <p className="mt-1 font-mono text-xs text-zinc-600">{agent.agentId}</p>
         </div>
-        <div className="text-right">
-          <p className={`text-3xl font-bold ${scoreColor}`}>
-            {reputation?.bayesianScore?.toFixed(1) || "N/A"}
-          </p>
-          <p className="text-xs text-zinc-500">Bayesian Score</p>
+        <div className="flex flex-col items-end gap-2">
+          <div className="text-right">
+            <p className={`text-3xl font-bold ${scoreColor}`}>
+              {reputation?.bayesianScore?.toFixed(1) || "N/A"}
+            </p>
+            <p className="text-xs text-zinc-500">Bayesian Score</p>
+          </div>
+          {isConnected && (
+            <button
+              onClick={() => setShowHireModal(true)}
+              className="rounded-lg bg-maldo-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-maldo-500"
+            >
+              Hire Agent
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Hire Modal */}
+      {showHireModal && address && (
+        <HireAgentModal
+          agentId={agent.agentId}
+          agentName={agent.name}
+          basePrice={agent.basePrice}
+          clientAddress={address}
+          onSuccess={() => {
+            setShowHireModal(false);
+            router.push("/dashboard");
+          }}
+          onClose={() => setShowHireModal(false)}
+        />
+      )}
 
       {/* Capabilities */}
       <div className="flex flex-wrap gap-2">

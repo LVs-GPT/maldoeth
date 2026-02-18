@@ -166,6 +166,17 @@ export class DealService {
       .all(principal.toLowerCase());
   }
 
+  completeDeal(nonce: string) {
+    const row = this.db
+      .prepare("SELECT * FROM deals WHERE nonce = ?")
+      .get(nonce) as DealRow | undefined;
+    if (!row) throw new ApiError(404, "Deal not found");
+    if (row.status !== "Funded") throw new ApiError(400, `Deal is already ${row.status}`);
+
+    this.db.prepare("UPDATE deals SET status = 'Completed' WHERE nonce = ?").run(nonce);
+    return { nonce, status: "Completed" };
+  }
+
   approveOrReject(approvalId: number, decision: "approved" | "rejected") {
     const result = this.db
       .prepare("UPDATE pending_approvals SET status = ? WHERE id = ? AND status = 'pending'")

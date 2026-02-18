@@ -58,6 +58,16 @@ export function createDealsRouter(dealService: DealService): Router {
     }
   });
 
+  // POST /api/v1/deals/:nonce/complete
+  router.post("/:nonce/complete", (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = dealService.completeDeal(req.params.nonce);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   // POST /api/v1/deals/approve/:id
   router.post("/approve/:id", (req: Request, res: Response, next: NextFunction) => {
     try {

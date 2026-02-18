@@ -84,7 +84,7 @@ export default function DashboardPage() {
             Loading...
           </div>
         ) : (
-          <DealStatusTable deals={deals} />
+          <DealStatusTable deals={deals} userAddress={address} onUpdate={loadData} />
         )}
       </section>
 

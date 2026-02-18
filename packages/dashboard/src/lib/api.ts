@@ -60,6 +60,34 @@ export async function rejectDeal(approvalId: number) {
   return fetchApi(`/api/v1/deals/reject/${approvalId}`, { method: "POST" });
 }
 
+export async function createDeal(body: {
+  agentId: string;
+  clientAddress: string;
+  priceUSDC: number;
+  taskDescription: string;
+}) {
+  return fetchApi("/api/v1/deals/create", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function completeDeal(nonce: string) {
+  return fetchApi(`/api/v1/deals/${nonce}/complete`, { method: "POST" });
+}
+
+export async function rateAgent(agentId: string, body: {
+  dealNonce: string;
+  raterAddress: string;
+  score: number;
+  comment?: string;
+}) {
+  return fetchApi(`/api/v1/agents/${agentId}/rate`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 // ─── Criteria ───────────────────────────────────────────────────────
 
 export async function getCriteria(principal: string) {
