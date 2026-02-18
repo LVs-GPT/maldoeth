@@ -3,51 +3,79 @@ import type Database from "better-sqlite3";
 import { ERC8004_IDENTITY_ABI, ERC8004_REPUTATION_ABI } from "../chain/abis.js";
 import { config } from "../config.js";
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 /**
  * Syncs ERC-8004 Identity NFTs from Sepolia into the local agents table.
  * Scans Transfer events from the Identity Registry to discover all minted agents,
  * then fetches their tokenURI metadata and on-chain reputation.
+ *
+ * Only scans the last LOOKBACK_BLOCKS (~3 days on Sepolia at 12s/block).
+ * Includes rate-limit backoff for Infura free tier.
  */
 export class IdentitySync {
   private provider: ethers.JsonRpcProvider;
   private identity: ethers.Contract;
   private reputation: ethers.Contract;
 
+  /** How many blocks back to scan (default ~3 days) */
+  private lookback: number;
+
   constructor(
     private db: Database.Database,
     provider?: ethers.JsonRpcProvider,
+    lookback = 20_000,
   ) {
     this.provider = provider ?? new ethers.JsonRpcProvider(config.sepoliaRpcUrl);
     this.identity = new ethers.Contract(config.identityRegistry, ERC8004_IDENTITY_ABI, this.provider);
     this.reputation = new ethers.Contract(config.reputationRegistry, ERC8004_REPUTATION_ABI, this.provider);
+    this.lookback = lookback;
   }
 
   async sync(): Promise<number> {
     console.log("[IdentitySync] Scanning ERC-8004 Identity Registry for agents...");
     console.log(`[IdentitySync] Contract: ${config.identityRegistry}`);
 
+    const currentBlock = await this.provider.getBlockNumber();
+    const fromBlock = Math.max(0, currentBlock - this.lookback);
+
+    console.log(`[IdentitySync] Scanning blocks ${fromBlock}–${currentBlock} (last ${this.lookback} blocks)`);
+
     // Scan Transfer events from address(0) = mints
     const mintFilter = this.identity.filters.Transfer(ethers.ZeroAddress);
-    const currentBlock = await this.provider.getBlockNumber();
 
-    // Scan from block 0 (or a known deploy block) — Sepolia is fast enough
-    // Use chunks to avoid RPC limits
-    const CHUNK_SIZE = 10_000;
+    // Use chunks of 5k with delay to stay within Infura rate limits
+    const CHUNK_SIZE = 5_000;
+    const DELAY_MS = 500;
     const allEvents: ethers.EventLog[] = [];
 
-    for (let from = 0; from <= currentBlock; from += CHUNK_SIZE) {
+    for (let from = fromBlock; from <= currentBlock; from += CHUNK_SIZE) {
       const to = Math.min(from + CHUNK_SIZE - 1, currentBlock);
-      try {
-        const events = await this.identity.queryFilter(mintFilter, from, to);
-        for (const e of events) {
-          if (e instanceof ethers.EventLog) {
-            allEvents.push(e);
+      let retries = 3;
+
+      while (retries > 0) {
+        try {
+          const events = await this.identity.queryFilter(mintFilter, from, to);
+          for (const e of events) {
+            if (e instanceof ethers.EventLog) {
+              allEvents.push(e);
+            }
+          }
+          break; // success
+        } catch {
+          retries--;
+          if (retries > 0) {
+            const backoff = DELAY_MS * (4 - retries);
+            console.warn(`[IdentitySync] Chunk ${from}–${to} rate limited, retrying in ${backoff}ms...`);
+            await sleep(backoff);
+          } else {
+            console.warn(`[IdentitySync] Chunk ${from}–${to} failed after retries, skipping.`);
           }
         }
-      } catch {
-        // Some RPCs limit range — try smaller chunks
-        console.warn(`[IdentitySync] Chunk ${from}-${to} failed, skipping...`);
       }
+
+      // Throttle between chunks
+      await sleep(DELAY_MS);
     }
 
     console.log(`[IdentitySync] Found ${allEvents.length} mint events.`);
@@ -74,6 +102,9 @@ export class IdentitySync {
       } catch (err: any) {
         console.warn(`[IdentitySync] Failed to sync token #${agentId}:`, err.message);
       }
+
+      // Throttle metadata fetches too
+      await sleep(300);
     }
 
     console.log(`[IdentitySync] Done — synced ${synced} new agents (${allEvents.length} total on-chain).`);
@@ -124,7 +155,6 @@ export class IdentitySync {
         const cid = uri.replace("ipfs://", "");
         const res = await fetch(`https://gateway.pinata.cloud/ipfs/${cid}`);
         if (!res.ok) {
-          // Try alternative gateway
           const res2 = await fetch(`https://ipfs.io/ipfs/${cid}`);
           if (!res2.ok) return null;
           return res2.json();
