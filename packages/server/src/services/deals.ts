@@ -120,7 +120,10 @@ export class DealService {
     const agent = this.db
       .prepare("SELECT wallet FROM agents WHERE agent_id = ?")
       .get(params.agentId) as { wallet: string } | undefined;
-    const serverAddress = agent?.wallet || params.agentId;
+    const serverAddress = agent?.wallet || (ethers.isAddress(params.agentId) ? params.agentId : null);
+    if (!serverAddress) {
+      throw new ApiError(400, `Agent "${params.agentId}" has no wallet. Register the agent first or use a wallet address as agentId.`);
+    }
 
     const txHash = await this.fundDealOnChain(
       nonce,
@@ -351,7 +354,11 @@ export class DealService {
       const agent = this.db
         .prepare("SELECT wallet FROM agents WHERE agent_id = ?")
         .get(approval.agent_id) as { wallet: string } | undefined;
-      const serverAddress = agent?.wallet || approval.agent_id;
+      const serverAddress = agent?.wallet || (ethers.isAddress(approval.agent_id) ? approval.agent_id : null);
+      if (!serverAddress) {
+        this.db.prepare("UPDATE pending_approvals SET status = 'pending' WHERE id = ?").run(approvalId);
+        throw new ApiError(400, `Agent "${approval.agent_id}" has no wallet. Register the agent first or use a wallet address as agentId.`);
+      }
 
       let txHash: string | undefined;
       try {
