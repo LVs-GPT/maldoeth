@@ -4,6 +4,7 @@ export const ERC8004_IDENTITY_ABI = [
   "function mint(address to, string memory uri) external returns (uint256 tokenId)",
   "function tokenURI(uint256 tokenId) external view returns (string memory)",
   "function ownerOf(uint256 tokenId) external view returns (address)",
+  "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
 ] as const;
 
 export const ERC8004_REPUTATION_ABI = [

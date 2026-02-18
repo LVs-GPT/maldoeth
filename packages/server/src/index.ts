@@ -1,6 +1,7 @@
 import { createApp } from "./app.js";
 import { getDb } from "./db/index.js";
 import { EscrowEventListener } from "./listeners/escrowEvents.js";
+import { IdentitySync } from "./listeners/identitySync.js";
 import { config } from "./config.js";
 
 const db = getDb();
@@ -22,14 +23,23 @@ app.listen(config.port, () => {
   console.log(`    GET  /x402/services/:capability     — x402 payment requirements`);
   console.log(`    POST /x402/services/:capability     — x402 paid request\n`);
 
-  // Start event listener (non-blocking — won't crash server if RPC is unavailable)
-  if (config.sepoliaRpcUrl && config.sepoliaRpcUrl !== "https://sepolia.infura.io/v3/demo") {
+  const hasRpc = config.sepoliaRpcUrl && config.sepoliaRpcUrl !== "https://sepolia.infura.io/v3/demo";
+
+  if (hasRpc) {
+    // Sync ERC-8004 agents from chain into local DB
+    const identitySync = new IdentitySync(db);
+    identitySync.sync().catch((err) => {
+      console.error("[IdentitySync] Failed:", err.message);
+      console.log("[IdentitySync] Server continues with local agents only.");
+    });
+
+    // Start escrow event listener
     const listener = new EscrowEventListener(db);
     listener.start().catch((err) => {
       console.error("[EventListener] Failed to start:", err.message);
       console.log("[EventListener] Server continues without live events — use API to manage deals.");
     });
   } else {
-    console.log("  [EventListener] Skipped — set SEPOLIA_RPC_URL to enable live event listening.\n");
+    console.log("  [Chain] Skipped — set SEPOLIA_RPC_URL to enable on-chain sync & event listening.\n");
   }
 });
