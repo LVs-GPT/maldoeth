@@ -44,9 +44,9 @@ export class IdentitySync {
     // Scan Transfer events from address(0) = mints
     const mintFilter = this.identity.filters.Transfer(ethers.ZeroAddress);
 
-    // Use chunks of 5k with delay to stay within Infura rate limits
-    const CHUNK_SIZE = 5_000;
-    const DELAY_MS = 500;
+    // Use small chunks with generous delay to stay within Infura free-tier rate limits
+    const CHUNK_SIZE = 2_000;
+    const DELAY_MS = 1_500;
     const allEvents: ethers.EventLog[] = [];
 
     for (let from = fromBlock; from <= currentBlock; from += CHUNK_SIZE) {
@@ -103,8 +103,8 @@ export class IdentitySync {
         console.warn(`[IdentitySync] Failed to sync token #${agentId}:`, err.message);
       }
 
-      // Throttle metadata fetches too
-      await sleep(300);
+      // Throttle metadata fetches to respect rate limits
+      await sleep(800);
     }
 
     console.log(`[IdentitySync] Done — synced ${synced} new agents (${allEvents.length} total on-chain).`);

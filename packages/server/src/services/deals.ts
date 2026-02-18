@@ -5,6 +5,24 @@ import type { CriteriaService } from "./criteria.js";
 import { getEscrow, getMockKleros, getSigner, getUsdc } from "../chain/provider.js";
 import { config } from "../config.js";
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Retry an async fn with exponential backoff (for Infura rate limits) */
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, baseMs = 2000): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      const isRateLimit = err?.message?.includes("Too Many Requests") || err?.code === -32005;
+      if (!isRateLimit || attempt === maxRetries) throw err;
+      const delay = baseMs * Math.pow(2, attempt);
+      console.warn(`[DealService] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})...`);
+      await sleep(delay);
+    }
+  }
+  throw new Error("Unreachable");
+}
+
 export interface CreateDealParams {
   serviceId?: string;
   agentId: string;
@@ -142,27 +160,29 @@ export class DealService {
     serverAddress: string,
     totalAmount: bigint,
   ): Promise<string> {
-    const usdc = getUsdc();
-    const escrow = getEscrow();
+    return withRetry(async () => {
+      const usdc = getUsdc();
+      const escrow = getEscrow();
 
-    // 1. Approve escrow to spend USDC (or transfer directly)
-    const approveTx = await usdc.approve(config.escrowAddress, totalAmount);
-    await approveTx.wait();
+      // 1. Approve escrow to spend USDC
+      const approveTx = await usdc.approve(config.escrowAddress, totalAmount);
+      await approveTx.wait();
 
-    // 2. Transfer USDC to escrow contract
-    const transferTx = await usdc.transfer(config.escrowAddress, totalAmount);
-    await transferTx.wait();
+      // 2. Transfer USDC to escrow contract
+      const transferTx = await usdc.transfer(config.escrowAddress, totalAmount);
+      await transferTx.wait();
 
-    // 3. Call receivePayment as facilitator
-    const paymentTx = await escrow.receivePayment(
-      nonce,
-      clientAddress,
-      serverAddress,
-      totalAmount,
-    );
-    const receipt = await paymentTx.wait();
+      // 3. Call receivePayment as facilitator
+      const paymentTx = await escrow.receivePayment(
+        nonce,
+        clientAddress,
+        serverAddress,
+        totalAmount,
+      );
+      const receipt = await paymentTx.wait();
 
-    return receipt.hash;
+      return receipt.hash;
+    });
   }
 
   async getDealStatus(nonce: string) {

@@ -6,6 +6,11 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(__dirname, "../../../.env") });
 
+// Prevent unhandled rejections from crashing the server
+process.on("unhandledRejection", (err: any) => {
+  console.error("[Server] Unhandled rejection (non-fatal):", err?.message || err);
+});
+
 import { createApp } from "./app.js";
 import { getDb } from "./db/index.js";
 import { EscrowEventListener } from "./listeners/escrowEvents.js";
