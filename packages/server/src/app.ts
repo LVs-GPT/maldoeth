@@ -10,6 +10,7 @@ import { CriteriaService } from "./services/criteria.js";
 import { DealService } from "./services/deals.js";
 import { RatingService } from "./services/rating.js";
 import { VouchService } from "./services/vouch.js";
+import { DbReputationAdapter } from "./services/db-reputation-adapter.js";
 
 import { createServicesRouter } from "./routes/services.js";
 import { createCriteriaRouter } from "./routes/criteria.js";
@@ -32,9 +33,10 @@ export function createApp(deps: AppDeps) {
   app.use(morgan("short"));
 
   // Services
+  const repAdapter = new DbReputationAdapter(deps.db);
   const registration = new RegistrationService(deps.db);
-  const discovery = new DiscoveryService(deps.db);
-  const criteriaService = new CriteriaService(deps.db);
+  const discovery = new DiscoveryService(deps.db, repAdapter);
+  const criteriaService = new CriteriaService(deps.db, repAdapter);
   const dealService = new DealService(deps.db, criteriaService);
   const ratingService = new RatingService(deps.db);
   const vouchService = new VouchService(deps.db);
