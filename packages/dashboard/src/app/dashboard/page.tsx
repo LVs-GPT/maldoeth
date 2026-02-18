@@ -34,36 +34,57 @@ export default function DashboardPage() {
 
   if (!isConnected) {
     return (
-      <div className="flex flex-col items-center justify-center gap-4 py-20">
-        <div className="rounded-full bg-maldo-500/20 p-4">
-          <svg className="h-8 w-8 text-maldo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+      <div className="flex flex-col items-center justify-center gap-5 py-24">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)]">
+          <svg className="h-6 w-6 text-maldo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
         </div>
-        <h2 className="text-xl font-semibold text-zinc-200">Connect your wallet</h2>
-        <p className="text-sm text-zinc-500">
-          Connect a Sepolia wallet to view your deals and manage agent criteria.
-        </p>
+        <div className="text-center">
+          <h2 className="font-serif text-xl font-semibold text-[var(--text-primary)]">Connect your wallet</h2>
+          <p className="mt-2 text-sm text-[var(--text-tertiary)]">
+            Connect a Sepolia wallet to view your deals and manage agent criteria.
+          </p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-2xl font-bold text-zinc-100">Dashboard</h1>
-        <p className="text-sm text-zinc-500">
-          Principal: {address?.slice(0, 6)}...{address?.slice(-4)}
-        </p>
-      </div>
+  const totalDeals = deals.length;
+  const activeDeals = deals.filter((d: any) => d.status === "Funded").length;
+  const completedDeals = deals.filter((d: any) => d.status === "Completed").length;
+  const disputedDeals = deals.filter((d: any) => d.status === "Disputed").length;
 
-      {/* Pending Approvals — most prominent */}
+  return (
+    <div className="space-y-12">
+      {/* Header */}
+      <header>
+        <h1 className="font-serif text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
+          Dashboard
+        </h1>
+        <p className="mt-2 font-mono text-xs text-[var(--text-tertiary)]">
+          {address?.slice(0, 6)}&hellip;{address?.slice(-4)}
+        </p>
+      </header>
+
+      {/* Stats */}
+      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--border)] sm:grid-cols-4">
+        <StatCell label="Total" value={totalDeals} />
+        <StatCell label="Active" value={activeDeals} accent={activeDeals > 0} />
+        <StatCell label="Completed" value={completedDeals} />
+        <StatCell label="Disputed" value={disputedDeals} warn={disputedDeals > 0} />
+      </section>
+
+      {/* Pending Approvals */}
       {pendingApprovals.length > 0 && (
         <section>
-          <h2 className="mb-3 text-lg font-semibold text-amber-300">
-            Pending Approvals ({pendingApprovals.length})
+          <h2 className="section-header mb-5 text-lg text-amber-400">
+            Pending Approvals
+            <span className="ml-2 font-mono text-sm font-normal text-[var(--text-tertiary)]">
+              ({pendingApprovals.length})
+            </span>
           </h2>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2">
             {pendingApprovals.map((approval: any) => (
               <PendingApprovalCard
                 key={approval.id}
@@ -75,44 +96,49 @@ export default function DashboardPage() {
         </section>
       )}
 
+      <hr className="section-rule" />
+
       {/* Deals table */}
       <section>
-        <h2 className="mb-3 text-lg font-semibold text-zinc-200">Deals</h2>
+        <h2 className="section-header mb-5 text-lg text-[var(--text-primary)]">Deals</h2>
         {loading ? (
-          <div className="flex items-center gap-2 text-zinc-500">
-            <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-600 border-t-maldo-400" />
-            Loading...
+          <div className="flex items-center gap-3 py-8 text-[var(--text-tertiary)]">
+            <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-maldo-500" />
+            <span className="text-sm">Loading&hellip;</span>
           </div>
         ) : (
           <DealStatusTable deals={deals} userAddress={address} onUpdate={loadData} />
         )}
       </section>
-
-      {/* Stats */}
-      <section className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatCard label="Total Deals" value={deals.length} />
-        <StatCard
-          label="Active"
-          value={deals.filter((d: any) => d.status === "Funded").length}
-        />
-        <StatCard
-          label="Completed"
-          value={deals.filter((d: any) => d.status === "Completed").length}
-        />
-        <StatCard
-          label="Disputed"
-          value={deals.filter((d: any) => d.status === "Disputed").length}
-        />
-      </section>
     </div>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: number }) {
+function StatCell({
+  label,
+  value,
+  accent,
+  warn,
+}: {
+  label: string;
+  value: number;
+  accent?: boolean;
+  warn?: boolean;
+}) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-4">
-      <p className="text-xs text-zinc-500">{label}</p>
-      <p className="text-2xl font-bold text-zinc-100">{value}</p>
+    <div className="bg-[var(--surface)] px-5 py-4">
+      <p className="smallcaps text-2xs text-[var(--text-tertiary)]">{label}</p>
+      <p
+        className={`mt-1 font-mono text-2xl font-semibold tabular-nums ${
+          warn
+            ? "text-red-400"
+            : accent
+              ? "text-maldo-400"
+              : "text-[var(--text-primary)]"
+        }`}
+      >
+        {value}
+      </p>
     </div>
   );
 }

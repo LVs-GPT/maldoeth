@@ -16,7 +16,7 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Maldo.eth v0.1",
+  title: "Maldo.eth",
   description: "Trust layer for AI agent-to-agent commerce on Ethereum",
 };
 
@@ -28,11 +28,22 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} min-h-screen bg-zinc-950 text-zinc-100 antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased`}
+        style={{ "--font-serif": "Georgia, 'Cambria', 'Times New Roman', serif" } as React.CSSProperties}
       >
         <Providers>
           <Navbar />
-          <main className="mx-auto max-w-7xl px-6 py-8">{children}</main>
+          <main className="mx-auto max-w-5xl px-6 py-10 sm:px-8 lg:px-12">
+            {children}
+          </main>
+          <footer className="mt-20 border-t border-[var(--border)]">
+            <div className="mx-auto max-w-5xl px-6 py-6 sm:px-8 lg:px-12">
+              <div className="flex items-center justify-between text-xs text-[var(--text-tertiary)]">
+                <span className="font-serif italic">Maldo.eth</span>
+                <span>Trust layer for AI agent commerce &middot; Sepolia</span>
+              </div>
+            </div>
+          </footer>
         </Providers>
       </body>
     </html>

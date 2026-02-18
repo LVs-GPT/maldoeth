@@ -45,24 +45,28 @@ export function RateAgentModal({ agentId, agentName, dealNonce, raterAddress, on
   const displayScore = hoverScore || score;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl">
-        <h2 className="text-lg font-bold text-zinc-100">Rate {agentName}</h2>
-        <p className="mt-1 text-sm text-zinc-500">
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-content">
+        <h2 className="font-serif text-xl font-semibold text-[var(--text-primary)]">
+          Rate {agentName}
+        </h2>
+        <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
           How was your experience with this agent?
         </p>
 
+        <hr className="section-rule my-5" />
+
         {done ? (
-          <div className="mt-6 rounded-lg bg-green-500/10 border border-green-500/30 p-4">
-            <p className="text-sm font-medium text-green-300">Rating submitted!</p>
-            <p className="mt-1 text-xs text-zinc-400">Reputation updated.</p>
+          <div className="rounded-lg border border-maldo-700 bg-maldo-500/5 p-4 animate-fade-in">
+            <p className="text-sm font-medium text-maldo-400">Rating submitted</p>
+            <p className="mt-1 text-xs text-[var(--text-tertiary)]">Reputation updated.</p>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {/* Star rating */}
             <div>
-              <label className="mb-2 block text-sm text-zinc-400">Rating</label>
-              <div className="flex gap-2">
+              <label className="smallcaps mb-2 block text-xs text-[var(--text-tertiary)]">Rating</label>
+              <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
                     key={star}
@@ -70,15 +74,17 @@ export function RateAgentModal({ agentId, agentName, dealNonce, raterAddress, on
                     onClick={() => setScore(star)}
                     onMouseEnter={() => setHoverScore(star)}
                     onMouseLeave={() => setHoverScore(0)}
-                    className={`text-3xl transition-colors ${
-                      star <= displayScore ? "text-yellow-400" : "text-zinc-700"
-                    } hover:scale-110`}
+                    className={`text-2xl transition-all duration-100 ${
+                      star <= displayScore
+                        ? "text-maldo-400 scale-110"
+                        : "text-[var(--border)] hover:text-[var(--text-tertiary)]"
+                    }`}
                   >
                     {star <= displayScore ? "\u2605" : "\u2606"}
                   </button>
                 ))}
                 {displayScore > 0 && (
-                  <span className="ml-2 self-center text-sm text-zinc-400">
+                  <span className="ml-3 font-mono text-xs tabular-nums text-[var(--text-tertiary)]">
                     {displayScore}/5
                   </span>
                 )}
@@ -87,34 +93,32 @@ export function RateAgentModal({ agentId, agentName, dealNonce, raterAddress, on
 
             {/* Comment */}
             <div>
-              <label className="mb-1 block text-sm text-zinc-400">Comment (optional)</label>
+              <label className="smallcaps mb-2 block text-xs text-[var(--text-tertiary)]">
+                Comment <span className="font-normal not-italic text-[var(--text-tertiary)]">(optional)</span>
+              </label>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
                 placeholder="Describe your experience..."
                 rows={2}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:border-maldo-500 focus:outline-none"
+                className="textarea"
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="text-xs text-red-400">{error}</p>
             )}
 
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800"
-              >
+              <button type="button" onClick={onClose} className="btn btn-ghost flex-1">
                 Skip
               </button>
               <button
                 type="submit"
                 disabled={loading || score === 0}
-                className="flex-1 rounded-lg bg-maldo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-maldo-500 disabled:opacity-50"
+                className="btn btn-primary flex-1"
               >
-                {loading ? "Submitting..." : "Submit Rating"}
+                {loading ? "Submitting\u2026" : "Submit Rating"}
               </button>
             </div>
           </form>

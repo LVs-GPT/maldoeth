@@ -15,11 +15,11 @@ interface Deal {
   created_at: string;
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  Funded: "bg-blue-500/20 text-blue-400",
-  Completed: "bg-green-500/20 text-green-400",
-  Disputed: "bg-red-500/20 text-red-400",
-  Refunded: "bg-zinc-500/20 text-zinc-400",
+const STATUS_STYLES: Record<string, string> = {
+  Funded: "border-blue-900/40 bg-blue-500/5 text-blue-400",
+  Completed: "border-maldo-800 bg-maldo-500/5 text-maldo-400",
+  Disputed: "border-red-900/40 bg-red-500/5 text-red-400",
+  Refunded: "border-[var(--border)] bg-[var(--surface)] text-[var(--text-tertiary)]",
 };
 
 const RULING_OPTIONS = [
@@ -45,7 +45,6 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
     setCompleting(deal.nonce);
     try {
       await completeDeal(deal.nonce);
-      // Show rate modal after completing
       setRatingDeal(deal);
       onUpdate?.();
     } catch (err: any) {
@@ -83,71 +82,72 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
 
   if (deals.length === 0) {
     return (
-      <div className="rounded-lg border border-zinc-800 p-8 text-center text-zinc-500">
-        No deals yet. Hire an agent to get started.
+      <div className="card p-10 text-center">
+        <p className="font-serif text-base text-[var(--text-tertiary)]">
+          No deals yet
+        </p>
+        <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+          Hire an agent to get started.
+        </p>
       </div>
     );
   }
 
   return (
     <>
-      <div className="overflow-hidden rounded-lg border border-zinc-800">
-        <table className="w-full text-sm">
-          <thead className="bg-zinc-900 text-zinc-400">
+      <div className="card overflow-hidden">
+        <table className="data-table">
+          <thead>
             <tr>
-              <th className="px-4 py-2 text-left font-medium">Nonce</th>
-              <th className="px-4 py-2 text-left font-medium">Server</th>
-              <th className="px-4 py-2 text-right font-medium">Amount</th>
-              <th className="px-4 py-2 text-center font-medium">Status</th>
-              <th className="px-4 py-2 text-left font-medium">Date</th>
-              <th className="px-4 py-2 text-center font-medium">Actions</th>
+              <th>Nonce</th>
+              <th>Server</th>
+              <th className="text-right">Amount</th>
+              <th className="text-center">Status</th>
+              <th>Date</th>
+              <th className="text-center">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-zinc-800">
+          <tbody>
             {deals.map((deal) => (
-              <tr key={deal.nonce} className="hover:bg-zinc-900/50">
-                <td className="px-4 py-2 font-mono text-xs text-zinc-300">
-                  {deal.nonce.slice(0, 10)}...
+              <tr key={deal.nonce}>
+                <td className="font-mono text-xs tabular-nums text-[var(--text-secondary)]">
+                  {deal.nonce.slice(0, 10)}&hellip;
                 </td>
-                <td className="px-4 py-2 font-mono text-xs text-zinc-300">
-                  {deal.server.slice(0, 10)}...
+                <td className="font-mono text-xs tabular-nums text-[var(--text-secondary)]">
+                  {deal.server.slice(0, 10)}&hellip;
                 </td>
-                <td className="px-4 py-2 text-right text-zinc-200">
+                <td className="text-right font-mono text-sm tabular-nums text-[var(--text-primary)]">
                   ${(deal.amount / 1e6).toFixed(2)}
                 </td>
-                <td className="px-4 py-2 text-center">
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${STATUS_COLORS[deal.status] || "bg-zinc-500/20 text-zinc-400"}`}
-                  >
+                <td className="text-center">
+                  <span className={`tag ${STATUS_STYLES[deal.status] || STATUS_STYLES.Refunded}`}>
                     {deal.status}
                   </span>
                 </td>
-                <td className="px-4 py-2 text-xs text-zinc-500">
+                <td className="font-mono text-xs tabular-nums text-[var(--text-tertiary)]">
                   {new Date(deal.created_at).toLocaleDateString()}
                 </td>
-                <td className="px-4 py-2 text-center">
+                <td className="text-center">
                   <div className="flex items-center justify-center gap-2">
-                    {/* Funded deals: Complete or Dispute */}
                     {deal.status === "Funded" && (
                       <>
                         <button
                           onClick={() => handleComplete(deal)}
                           disabled={completing === deal.nonce}
-                          className="rounded bg-green-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-green-500 disabled:opacity-50"
+                          className="btn btn-success py-1 px-3 text-xs"
                         >
-                          {completing === deal.nonce ? "..." : "Complete"}
+                          {completing === deal.nonce ? "\u2026" : "Complete"}
                         </button>
                         <button
                           onClick={() => handleDispute(deal)}
                           disabled={disputing === deal.nonce}
-                          className="rounded bg-red-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-red-500 disabled:opacity-50"
+                          className="btn btn-danger py-1 px-3 text-xs"
                         >
-                          {disputing === deal.nonce ? "..." : "Dispute"}
+                          {disputing === deal.nonce ? "\u2026" : "Dispute"}
                         </button>
                       </>
                     )}
 
-                    {/* Disputed deals: Resolve with ruling options */}
                     {deal.status === "Disputed" && (
                       <div className="relative">
                         <button
@@ -157,25 +157,24 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
                             )
                           }
                           disabled={resolving === deal.nonce}
-                          className="rounded bg-amber-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-amber-500 disabled:opacity-50"
+                          className="btn btn-warning py-1 px-3 text-xs"
                         >
-                          {resolving === deal.nonce ? "..." : "Resolve"}
+                          {resolving === deal.nonce ? "\u2026" : "Resolve"}
                         </button>
 
-                        {/* Ruling dropdown */}
                         {showResolveMenu === deal.nonce && (
-                          <div className="absolute right-0 z-10 mt-1 w-48 rounded-lg border border-zinc-700 bg-zinc-900 shadow-lg">
+                          <div className="absolute right-0 z-10 mt-2 w-52 rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-xl animate-fade-in">
                             {RULING_OPTIONS.map((opt) => (
                               <button
                                 key={opt.value}
                                 onClick={() => handleResolve(deal, opt.value)}
-                                className="block w-full px-4 py-2 text-left text-xs hover:bg-zinc-800 first:rounded-t-lg last:rounded-b-lg"
+                                className="block w-full px-4 py-2.5 text-left text-xs transition-colors hover:bg-[var(--surface-raised)] first:rounded-t-lg last:rounded-b-lg"
                               >
-                                <span className="font-medium text-zinc-200">
+                                <span className="font-medium text-[var(--text-primary)]">
                                   {opt.label}
                                 </span>
-                                <span className="ml-1 text-zinc-500">
-                                  — {opt.description}
+                                <span className="ml-1.5 text-[var(--text-tertiary)]">
+                                  &mdash; {opt.description}
                                 </span>
                               </button>
                             ))}
@@ -184,11 +183,10 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
                       </div>
                     )}
 
-                    {/* Completed deals: Rate */}
                     {deal.status === "Completed" && userAddress && (
                       <button
                         onClick={() => setRatingDeal(deal)}
-                        className="rounded bg-yellow-600/80 px-3 py-1 text-xs font-medium text-white hover:bg-yellow-500"
+                        className="btn btn-ghost py-1 px-3 text-xs"
                       >
                         Rate
                       </button>
@@ -201,11 +199,10 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
         </table>
       </div>
 
-      {/* Rate modal */}
       {ratingDeal && userAddress && (
         <RateAgentModal
           agentId={ratingDeal.server}
-          agentName={ratingDeal.server.slice(0, 10) + "..."}
+          agentName={ratingDeal.server.slice(0, 10) + "\u2026"}
           dealNonce={ratingDeal.nonce}
           raterAddress={userAddress}
           onSuccess={() => {

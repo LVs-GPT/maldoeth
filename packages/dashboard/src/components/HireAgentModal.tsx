@@ -34,7 +34,6 @@ export function HireAgentModal({ agentId, agentName, basePrice, clientAddress, o
       setResult(res);
 
       if (!res.requiresHumanApproval && res.nonce) {
-        // Auto-approved — deal created
         setTimeout(() => onSuccess(res.nonce), 1500);
       }
     } catch (err: any) {
@@ -45,74 +44,74 @@ export function HireAgentModal({ agentId, agentName, basePrice, clientAddress, o
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-xl border border-zinc-700 bg-zinc-900 p-6 shadow-2xl">
-        <h2 className="text-lg font-bold text-zinc-100">Hire {agentName}</h2>
-        <p className="mt-1 text-sm text-zinc-500">
-          Price: ${(basePrice / 1e6).toFixed(2)} USDC (Sepolia testnet)
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-content">
+        <h2 className="font-serif text-xl font-semibold text-[var(--text-primary)]">
+          Hire {agentName}
+        </h2>
+        <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
+          Price: <span className="font-mono text-[var(--text-secondary)]">${(basePrice / 1e6).toFixed(2)}</span> USDC
+          <span className="ml-1 text-[var(--text-tertiary)]">&middot; Sepolia testnet</span>
         </p>
 
+        <hr className="section-rule my-5" />
+
         {result ? (
-          <div className="mt-6 space-y-3">
+          <div className="animate-fade-in space-y-4">
             {result.requiresHumanApproval ? (
               <>
-                <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-4">
-                  <p className="text-sm font-medium text-amber-300">Requires approval</p>
-                  <p className="mt-1 text-xs text-zinc-400">
-                    Your criteria flagged: {result.failedChecks?.join(", ")}
+                <div className="rounded-lg border border-amber-700/30 bg-amber-500/5 p-4">
+                  <p className="text-sm font-medium text-amber-400">Requires approval</p>
+                  <p className="mt-1.5 text-xs text-[var(--text-tertiary)]">
+                    Criteria flagged: <span className="text-amber-400/80">{result.failedChecks?.join(", ")}</span>
                   </p>
-                  <p className="mt-1 text-xs text-zinc-500">
+                  <p className="mt-1 text-xs text-[var(--text-tertiary)]">
                     Go to Dashboard to approve or reject this deal.
                   </p>
                 </div>
-                <button
-                  onClick={onClose}
-                  className="w-full rounded-lg bg-zinc-800 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-700"
-                >
-                  Got it
+                <button onClick={onClose} className="btn btn-ghost w-full">
+                  Understood
                 </button>
               </>
             ) : (
-              <div className="rounded-lg bg-green-500/10 border border-green-500/30 p-4">
-                <p className="text-sm font-medium text-green-300">Deal created!</p>
-                <p className="mt-1 text-xs text-zinc-400">
-                  Auto-approved by your criteria. Redirecting to dashboard...
+              <div className="rounded-lg border border-maldo-700 bg-maldo-500/5 p-4">
+                <p className="text-sm font-medium text-maldo-400">Deal created</p>
+                <p className="mt-1 text-xs text-[var(--text-tertiary)]">
+                  Auto-approved by your criteria. Redirecting&hellip;
                 </p>
               </div>
             )}
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="mb-1 block text-sm text-zinc-400">Task description</label>
+              <label className="smallcaps mb-2 block text-xs text-[var(--text-tertiary)]">
+                Task description
+              </label>
               <textarea
                 value={taskDescription}
                 onChange={(e) => setTaskDescription(e.target.value)}
                 placeholder="Describe what you need this agent to do..."
                 rows={3}
-                className="w-full rounded-lg border border-zinc-700 bg-zinc-800 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600 focus:border-maldo-500 focus:outline-none"
+                className="textarea"
                 required
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-400">{error}</p>
+              <p className="text-xs text-red-400">{error}</p>
             )}
 
             <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800"
-              >
+              <button type="button" onClick={onClose} className="btn btn-ghost flex-1">
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading || !taskDescription.trim()}
-                className="flex-1 rounded-lg bg-maldo-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-maldo-500 disabled:opacity-50"
+                className="btn btn-primary flex-1"
               >
-                {loading ? "Creating deal..." : "Hire & Pay"}
+                {loading ? "Creating deal\u2026" : "Hire & Pay"}
               </button>
             </div>
           </form>

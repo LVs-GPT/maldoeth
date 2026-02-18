@@ -14,33 +14,54 @@ export function Navbar() {
   const pathname = usePathname();
 
   return (
-    <nav className="border-b border-zinc-800 bg-zinc-950">
-      <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3">
-        <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="text-lg font-bold text-maldo-400">
-            Maldo.eth
+    <nav className="border-b border-[var(--border)]">
+      <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4 sm:px-8 lg:px-12">
+        {/* Logo */}
+        <div className="flex items-center gap-10">
+          <Link href="/dashboard" className="group flex items-baseline gap-1.5">
+            <span className="font-serif text-xl font-semibold tracking-tight text-[var(--text-primary)]">
+              Maldo
+            </span>
+            <span className="font-serif text-xl font-light italic text-maldo-500">
+              .eth
+            </span>
           </Link>
-          <div className="flex gap-1">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded-md px-3 py-1.5 text-sm transition-colors ${
-                  pathname === item.href
-                    ? "bg-maldo-500/20 text-maldo-300"
-                    : "text-zinc-400 hover:text-zinc-200"
-                }`}
-              >
-                {item.label}
-              </Link>
-            ))}
+
+          {/* Nav links */}
+          <div className="flex items-center gap-1">
+            {NAV_ITEMS.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`relative px-3 py-1 text-[0.8rem] tracking-wide transition-colors ${
+                    isActive
+                      ? "text-[var(--text-primary)]"
+                      : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)]"
+                  }`}
+                >
+                  <span className="smallcaps">{item.label}</span>
+                  {isActive && (
+                    <span className="absolute bottom-0 left-3 right-3 h-px bg-maldo-500" />
+                  )}
+                </Link>
+              );
+            })}
           </div>
         </div>
+
+        {/* Right side */}
         <div className="flex items-center gap-4">
-          <span className="rounded-full bg-green-500/20 px-2.5 py-0.5 text-xs text-green-400">
+          <span className="tag border-maldo-800 bg-maldo-500/8 text-maldo-400 text-2xs">
+            <span className="status-dot bg-maldo-500 status-dot-live mr-1.5" />
             Sepolia
           </span>
-          <ConnectButton accountStatus="address" chainStatus="none" showBalance={false} />
+          <ConnectButton
+            accountStatus="address"
+            chainStatus="none"
+            showBalance={false}
+          />
         </div>
       </div>
     </nav>

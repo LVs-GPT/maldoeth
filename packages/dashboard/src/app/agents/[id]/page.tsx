@@ -42,19 +42,19 @@ export default function AgentProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 py-20 text-zinc-500">
-        <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-600 border-t-maldo-400" />
-        Loading agent profile...
+      <div className="flex items-center gap-3 py-24 text-[var(--text-tertiary)]">
+        <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--border)] border-t-maldo-500" />
+        <span className="text-sm">Loading agent profile&hellip;</span>
       </div>
     );
   }
 
   if (error || !agent) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-red-400">{error || "Agent not found"}</p>
-        <Link href="/agents" className="mt-4 text-sm text-maldo-400 hover:underline">
-          Back to discovery
+      <div className="py-24 text-center">
+        <p className="font-serif text-base text-red-400">{error || "Agent not found"}</p>
+        <Link href="/agents" className="mt-4 inline-block text-sm text-maldo-500 hover:text-maldo-400 transition-colors">
+          &larr; Back to discovery
         </Link>
       </div>
     );
@@ -62,42 +62,53 @@ export default function AgentProfilePage() {
 
   const scoreColor =
     reputation?.bayesianScore >= 4.5
-      ? "text-green-400"
+      ? "text-maldo-400"
       : reputation?.bayesianScore >= 3.5
-        ? "text-yellow-400"
+        ? "text-amber-400"
         : "text-red-400";
 
   return (
-    <div className="space-y-8">
-      {/* Back link */}
-      <Link href="/agents" className="text-sm text-maldo-400 hover:underline">
-        &larr; Back to discovery
+    <div className="space-y-10">
+      {/* Breadcrumb */}
+      <Link
+        href="/agents"
+        className="inline-flex items-center gap-1.5 text-xs text-[var(--text-tertiary)] transition-colors hover:text-maldo-500"
+      >
+        <span>&larr;</span>
+        <span className="smallcaps">Back to discovery</span>
       </Link>
 
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-zinc-100">{agent.name}</h1>
-          <p className="text-sm text-zinc-500">{agent.description || "No description"}</p>
-          <p className="mt-1 font-mono text-xs text-zinc-600">{agent.agentId}</p>
+      <header className="flex items-start justify-between gap-8">
+        <div className="flex-1">
+          <h1 className="font-serif text-3xl font-semibold tracking-tight text-[var(--text-primary)]">
+            {agent.name}
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--text-tertiary)]">
+            {agent.description || "No description"}
+          </p>
+          <p className="mt-2 font-mono text-2xs text-[var(--text-tertiary)] opacity-60">
+            {agent.agentId}
+          </p>
         </div>
-        <div className="flex flex-col items-end gap-2">
+
+        <div className="flex flex-col items-end gap-3">
           <div className="text-right">
-            <p className={`text-3xl font-bold ${scoreColor}`}>
+            <p className={`font-mono text-4xl font-bold tabular-nums ${scoreColor}`}>
               {reputation?.bayesianScore?.toFixed(1) || "N/A"}
             </p>
-            <p className="text-xs text-zinc-500">Bayesian Score</p>
+            <p className="smallcaps mt-1 text-2xs text-[var(--text-tertiary)]">Bayesian Score</p>
           </div>
           {isConnected && (
             <button
               onClick={() => setShowHireModal(true)}
-              className="rounded-lg bg-maldo-600 px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-maldo-500"
+              className="btn btn-primary"
             >
               Hire Agent
             </button>
           )}
         </div>
-      </div>
+      </header>
 
       {/* Hire Modal */}
       {showHireModal && address && (
@@ -119,31 +130,33 @@ export default function AgentProfilePage() {
         {agent.capabilities?.map((cap: string) => (
           <span
             key={cap}
-            className="rounded-full bg-maldo-500/20 px-3 py-1 text-sm text-maldo-300"
+            className="tag border-maldo-800 bg-maldo-500/8 text-maldo-400"
           >
             {cap}
           </span>
         ))}
       </div>
 
-      {/* Stats grid */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-5">
-        <StatCard label="Price" value={`$${(agent.basePrice / 1e6).toFixed(2)}`} />
-        <StatCard label="Raw Score" value={reputation?.score?.toFixed(2) || "0"} />
-        <StatCard label="Reviews" value={reputation?.reviewCount || 0} />
-        <StatCard label="Dispute Rate" value={`${((reputation?.disputeRate || 0) * 100).toFixed(0)}%`} />
-        <StatCard label="Vouches" value={vouches.length} />
-      </div>
+      <hr className="section-rule" />
+
+      {/* Stats */}
+      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--border)] sm:grid-cols-5">
+        <MetricCell label="Price" value={`$${(agent.basePrice / 1e6).toFixed(2)}`} />
+        <MetricCell label="Raw Score" value={reputation?.score?.toFixed(2) || "0"} />
+        <MetricCell label="Reviews" value={reputation?.reviewCount || 0} />
+        <MetricCell label="Dispute Rate" value={`${((reputation?.disputeRate || 0) * 100).toFixed(0)}%`} />
+        <MetricCell label="Vouches" value={vouches.length} />
+      </section>
 
       {/* Badges */}
       {reputation?.badges?.length > 0 && (
         <section>
-          <h2 className="mb-2 text-sm font-semibold text-zinc-400">Badges</h2>
+          <h2 className="section-header mb-4 text-base text-[var(--text-secondary)]">Badges</h2>
           <div className="flex flex-wrap gap-2">
             {reputation.badges.map((badge: string) => (
               <span
                 key={badge}
-                className="rounded-full bg-purple-500/20 px-3 py-1 text-sm text-purple-300"
+                className="tag border-purple-800 bg-purple-500/5 text-purple-400"
               >
                 {badge}
               </span>
@@ -155,51 +168,64 @@ export default function AgentProfilePage() {
       {/* Vouches */}
       {vouches.length > 0 && (
         <section>
-          <h2 className="mb-2 text-sm font-semibold text-zinc-400">Vouches</h2>
-          <div className="space-y-2">
+          <h2 className="section-header mb-4 text-base text-[var(--text-secondary)]">Vouches</h2>
+          <div className="space-y-1">
             {vouches.map((v: any) => (
               <div
                 key={v.id}
-                className="flex items-center justify-between rounded-lg border border-zinc-800 px-4 py-2"
+                className="flex items-center justify-between border-b border-[var(--border-subtle)] py-2.5"
               >
-                <span className="text-sm text-zinc-300">{v.voucher_name || v.voucher_agent_id}</span>
-                <span className="text-xs text-zinc-500">weight: {v.weight?.toFixed(2)}</span>
+                <span className="text-sm text-[var(--text-primary)]">
+                  {v.voucher_name || v.voucher_agent_id}
+                </span>
+                <span className="font-mono text-xs tabular-nums text-[var(--text-tertiary)]">
+                  weight: {v.weight?.toFixed(2)}
+                </span>
               </div>
             ))}
           </div>
         </section>
       )}
 
-      {/* Rating history */}
+      <hr className="section-rule" />
+
+      {/* Ratings */}
       <section>
-        <h2 className="mb-2 text-sm font-semibold text-zinc-400">
-          Recent Ratings ({ratings.length})
+        <h2 className="section-header mb-5 text-base text-[var(--text-secondary)]">
+          Recent Ratings
+          <span className="ml-2 font-mono text-sm font-normal text-[var(--text-tertiary)]">
+            ({ratings.length})
+          </span>
         </h2>
         {ratings.length === 0 ? (
-          <p className="text-sm text-zinc-600">No ratings yet.</p>
+          <p className="text-sm italic text-[var(--text-tertiary)]">No ratings yet.</p>
         ) : (
-          <div className="space-y-2">
+          <div className="space-y-1">
             {ratings.slice(0, 10).map((rating: any) => (
               <div
                 key={rating.id}
-                className="flex items-start justify-between rounded-lg border border-zinc-800 px-4 py-3"
+                className="flex items-start justify-between border-b border-[var(--border-subtle)] py-3"
               >
                 <div>
-                  <div className="flex gap-1">
+                  <div className="flex gap-0.5">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <span
                         key={star}
-                        className={`text-sm ${star <= rating.score ? "text-yellow-400" : "text-zinc-700"}`}
+                        className={`text-sm ${
+                          star <= rating.score ? "text-maldo-400" : "text-[var(--border)]"
+                        }`}
                       >
-                        *
+                        {star <= rating.score ? "\u2605" : "\u2606"}
                       </span>
                     ))}
                   </div>
                   {rating.comment && (
-                    <p className="mt-1 text-sm text-zinc-400">{rating.comment}</p>
+                    <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-tertiary)]">
+                      {rating.comment}
+                    </p>
                   )}
                 </div>
-                <span className="text-xs text-zinc-600">
+                <span className="ml-4 shrink-0 font-mono text-2xs tabular-nums text-[var(--text-tertiary)]">
                   {new Date(rating.created_at).toLocaleDateString()}
                 </span>
               </div>
@@ -208,32 +234,39 @@ export default function AgentProfilePage() {
         )}
       </section>
 
-      {/* Wallet info */}
-      <section className="rounded-lg border border-zinc-800 p-4">
-        <h2 className="mb-2 text-sm font-semibold text-zinc-400">Details</h2>
-        <div className="space-y-1 text-sm">
-          <p className="text-zinc-500">
-            Wallet: <span className="font-mono text-zinc-300">{agent.wallet}</span>
-          </p>
-          {agent.endpoint && (
-            <p className="text-zinc-500">
-              Endpoint: <span className="text-zinc-300">{agent.endpoint}</span>
-            </p>
-          )}
-          <p className="text-zinc-500">
-            Registered: <span className="text-zinc-300">{new Date(agent.createdAt).toLocaleString()}</span>
-          </p>
+      <hr className="section-rule" />
+
+      {/* Details */}
+      <section>
+        <h2 className="section-header mb-4 text-base text-[var(--text-secondary)]">Details</h2>
+        <div className="space-y-2 text-sm">
+          <DetailRow label="Wallet" value={agent.wallet} mono />
+          {agent.endpoint && <DetailRow label="Endpoint" value={agent.endpoint} />}
+          <DetailRow label="Registered" value={new Date(agent.createdAt).toLocaleString()} />
         </div>
       </section>
     </div>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function MetricCell({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3">
-      <p className="text-xs text-zinc-500">{label}</p>
-      <p className="text-lg font-bold text-zinc-100">{String(value)}</p>
+    <div className="bg-[var(--surface)] px-5 py-4">
+      <p className="smallcaps text-2xs text-[var(--text-tertiary)]">{label}</p>
+      <p className="mt-1 font-mono text-lg font-semibold tabular-nums text-[var(--text-primary)]">
+        {String(value)}
+      </p>
+    </div>
+  );
+}
+
+function DetailRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-baseline gap-3 border-b border-[var(--border-subtle)] pb-2">
+      <span className="smallcaps w-24 shrink-0 text-xs text-[var(--text-tertiary)]">{label}</span>
+      <span className={`text-sm text-[var(--text-secondary)] ${mono ? "font-mono text-xs break-all" : ""}`}>
+        {value}
+      </span>
     </div>
   );
 }
