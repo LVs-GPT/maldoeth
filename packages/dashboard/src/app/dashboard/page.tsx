@@ -23,15 +23,9 @@ export default function DashboardPage() {
           : { pendingApprovals: [] },
       ]);
       const allDeals = dealsData.deals || [];
-      // Filter to only show deals involving the connected wallet
-      const myDeals = address
-        ? allDeals.filter(
-            (d: any) =>
-              d.client?.toLowerCase() === address.toLowerCase() ||
-              d.server?.toLowerCase() === address.toLowerCase(),
-          )
-        : allDeals;
-      setDeals(myDeals);
+      // PoC: show all deals — the server wallet acts as facilitator for
+      // every user, so on-chain client never matches the connected wallet.
+      setDeals(allDeals);
       setPendingApprovals(pendingData.approvals || pendingData.pendingApprovals || []);
     } finally {
       setLoading(false);
