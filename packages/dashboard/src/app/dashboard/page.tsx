@@ -27,8 +27,8 @@ export default function DashboardPage() {
       const myDeals = address
         ? allDeals.filter(
             (d: any) =>
-              d.clientAddress?.toLowerCase() === address.toLowerCase() ||
-              d.serverAddress?.toLowerCase() === address.toLowerCase(),
+              d.client?.toLowerCase() === address.toLowerCase() ||
+              d.server?.toLowerCase() === address.toLowerCase(),
           )
         : allDeals;
       setDeals(myDeals);
