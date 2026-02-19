@@ -131,17 +131,28 @@ export class IdentitySync {
           .get(raw.agentId);
         if (existing) continue;
 
+        let agent: Awaited<ReturnType<typeof this.fetchAgentData>> = null;
         try {
-          const agent = await this.fetchAgentData(raw.agentId, raw.owner, raw.agentURI);
-          if (agent) {
-            this.upsertAgent(agent);
-            synced++;
-            if (synced % 50 === 0) {
-              console.log(`[IdentitySync] Progress: ${synced} new agents synced (${totalFetched} scanned)...`);
-            }
-          }
+          agent = await this.fetchAgentData(raw.agentId, raw.owner, raw.agentURI);
         } catch (err: any) {
-          console.warn(`[IdentitySync] Failed to sync agent #${raw.agentId}:`, err.message);
+          console.warn(`[IdentitySync] Metadata failed for #${raw.agentId}: ${err.message}`);
+        }
+
+        // Always store the agent — use fallback data if metadata resolution failed
+        this.upsertAgent(agent ?? {
+          agentId: raw.agentId,
+          name: `Agent #${raw.agentId}`,
+          description: "",
+          capabilities: [],
+          basePrice: 0,
+          endpoint: "",
+          wallet: (raw.owner || "").toLowerCase(),
+          ipfsUri: raw.agentURI || "",
+        });
+        synced++;
+
+        if (synced % 100 === 0) {
+          console.log(`[IdentitySync] Progress: ${synced} new agents synced (${totalFetched} scanned)...`);
         }
 
         // Only throttle HTTP fetches (IPFS/HTTP URIs) — data: URIs are local
@@ -242,18 +253,29 @@ export class IdentitySync {
         .get(agentId);
       if (existing) continue;
 
+      let agent: Awaited<ReturnType<typeof this.fetchAgentData>> = null;
       try {
-        const agent = await this.fetchAgentData(agentId, owner, agentURI);
-        if (agent) {
-          this.upsertAgent(agent);
-          synced++;
-          console.log(`[IdentitySync] Synced agent #${agentId}: ${agent.name}`);
-        }
+        agent = await this.fetchAgentData(agentId, owner, agentURI);
       } catch (err: any) {
-        console.warn(`[IdentitySync] Failed to sync agent #${agentId}:`, err.message);
+        console.warn(`[IdentitySync] Metadata failed for #${agentId}: ${err.message}`);
       }
 
-      await sleep(500);
+      // Always store — use fallback data if metadata resolution failed
+      this.upsertAgent(agent ?? {
+        agentId,
+        name: `Agent #${agentId}`,
+        description: "",
+        capabilities: [],
+        basePrice: 0,
+        endpoint: "",
+        wallet: (owner || "").toLowerCase(),
+        ipfsUri: agentURI || "",
+      });
+      synced++;
+
+      const needsHttp = agentURI && !agentURI.startsWith("data:");
+      if (needsHttp) await sleep(100);
+      else await sleep(50);
     }
 
     console.log(`[IdentitySync] Done — synced ${synced} new agents (${allEvents.length} total on-chain).`);
