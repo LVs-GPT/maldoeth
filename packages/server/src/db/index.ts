@@ -89,6 +89,30 @@ function runMigrations(database: Database.Database): void {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
+    -- Ratings
+    CREATE TABLE IF NOT EXISTS ratings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      deal_nonce TEXT NOT NULL,
+      rater_address TEXT NOT NULL,
+      ratee_agent_id TEXT NOT NULL,
+      score INTEGER NOT NULL CHECK(score >= 1 AND score <= 5),
+      comment TEXT DEFAULT '',
+      tx_hash TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(deal_nonce, rater_address)
+    );
+
+    -- Vouches
+    CREATE TABLE IF NOT EXISTS vouches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      voucher_agent_id TEXT NOT NULL,
+      vouchee_agent_id TEXT NOT NULL,
+      voucher_wallet TEXT NOT NULL,
+      weight REAL NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(voucher_agent_id, vouchee_agent_id)
+    );
+
     -- Index for discovery
     CREATE INDEX IF NOT EXISTS idx_agents_capabilities ON agents(capabilities);
     CREATE INDEX IF NOT EXISTS idx_agents_name ON agents(name);

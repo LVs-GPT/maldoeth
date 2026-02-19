@@ -2,9 +2,10 @@ import dotenv from "dotenv";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
-// Load .env from monorepo root (two levels up from packages/server/src/)
+// Load .env — monorepo root (local dev) or server dir (standalone deploy)
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(__dirname, "../../../.env") });
+dotenv.config({ path: resolve(__dirname, "../.env") });
 
 // Prevent unhandled rejections from crashing the server
 process.on("unhandledRejection", (err: any) => {
@@ -16,8 +17,16 @@ import { getDb } from "./db/index.js";
 import { EscrowEventListener } from "./listeners/escrowEvents.js";
 import { IdentitySync } from "./listeners/identitySync.js";
 import { config } from "./config.js";
+import { isDbEmpty, seedDemoData } from "./seed.js";
 
 const db = getDb();
+
+// Auto-seed demo data if database is empty (e.g. fresh Render deploy)
+if (isDbEmpty(db)) {
+  console.log("[Seed] Empty database detected, seeding demo data...");
+  seedDemoData(db);
+}
+
 const { app } = createApp({ db });
 
 app.listen(config.port, () => {
