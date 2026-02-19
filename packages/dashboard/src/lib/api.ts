@@ -21,8 +21,9 @@ export async function listAgents() {
   return fetchApi("/api/v1/agents");
 }
 
-export async function discoverAgents(capability: string, limit = 10) {
-  const params = new URLSearchParams({ capability, limit: String(limit) });
+export async function discoverAgents(capability?: string, limit = 50) {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (capability) params.set("capability", capability);
   return fetchApi(`/api/v1/services/discover?${params}`);
 }
 

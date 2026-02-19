@@ -184,15 +184,14 @@ export class EscrowEventListener {
   }
 
   private upsertDeal(nonce: string, dealId: number, client: string, server: string, amount: number, status: string): void {
+    // On conflict: only update deal_id and status.
+    // Preserve client/server/amount from the API handler (real addresses vs on-chain facilitator).
     this.db
       .prepare(
         `INSERT INTO deals (nonce, deal_id, client, server, amount, status)
          VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT(nonce) DO UPDATE SET
            deal_id = excluded.deal_id,
-           client = excluded.client,
-           server = excluded.server,
-           amount = excluded.amount,
            status = excluded.status`,
       )
       .run(nonce, dealId, client.toLowerCase(), server.toLowerCase(), amount, status);

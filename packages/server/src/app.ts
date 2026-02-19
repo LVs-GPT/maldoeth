@@ -64,12 +64,13 @@ export function createApp(deps: AppDeps) {
 
   // Global error handler
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+    if (res.headersSent) return; // Response already sent (e.g. proxy timeout)
     if (err instanceof ApiError) {
       res.status(err.statusCode).json({ error: err.message });
       return;
     }
     console.error("Unhandled error:", err);
-    res.status(500).json({ error: "Internal server error" });
+    res.status(500).json({ error: err.message || "Internal server error" });
   });
 
   return { app, registration, discovery, criteriaService, dealService, ratingService, vouchService };
