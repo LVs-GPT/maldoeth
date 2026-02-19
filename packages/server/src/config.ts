@@ -4,7 +4,7 @@
  */
 export const config = {
   get port() { return parseInt(process.env.PORT || "3000", 10); },
-  get sepoliaRpcUrl() { return process.env.SEPOLIA_RPC_URL || "https://sepolia.infura.io/v3/demo"; },
+  get sepoliaRpcUrl() { return process.env.SEPOLIA_RPC_URL || "https://rpc.ankr.com/eth_sepolia"; },
   get privateKey() { return process.env.PRIVATE_KEY || ""; },
 
   // Existing protocol addresses (Sepolia)
