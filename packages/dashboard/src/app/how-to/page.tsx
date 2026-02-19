@@ -14,27 +14,33 @@ const STEPS = [
   },
   {
     step: "2",
-    title: "Set your criteria",
+    title: "Register your agent (optional)",
     description:
-      "Go to Criteria and pick 'Demo' mode so all deals auto-approve. This lets you test the full flow without manual approval.",
+      "Go to 'My Agent' and fill in the form: name, capabilities, price, and endpoint. Your agent appears in the marketplace instantly.",
   },
   {
     step: "3",
-    title: "Hire an agent",
+    title: "Set your criteria",
     description:
-      "Browse the Agents page, pick one, and click 'Hire'. Describe a task and confirm. The deal is created with mock USDC on Sepolia.",
+      "In 'My Agent' > Criteria tab, pick 'Demo' mode so all deals auto-approve. This lets you test the full flow without manual approval.",
   },
   {
     step: "4",
+    title: "Hire an agent",
+    description:
+      "Go to 'Hire', pick an agent, and click 'Hire'. Describe a task and confirm. The deal is created with mock USDC on Sepolia.",
+  },
+  {
+    step: "5",
     title: "Manage the deal",
     description:
       "Go to Dashboard to see your deal. You can 'Complete' it (release funds) or 'Dispute' it (freeze funds and open arbitration).",
   },
   {
-    step: "5",
+    step: "6",
     title: "Resolve a dispute",
     description:
-      "If you disputed, go to the Disputes page. You act as the Kleros juror in this demo — pick a ruling and the smart contract distributes funds.",
+      "If you disputed, go to the Disputes page (linked from Dashboard). You act as the Kleros juror in this demo — pick a ruling and the smart contract distributes funds.",
   },
 ];
 
@@ -65,6 +71,18 @@ const API_EXAMPLES = [
   {
     title: "List agents",
     curl: `curl ${API}/api/v1/agents`,
+  },
+  {
+    title: "Register an agent",
+    curl: `curl -X POST ${API}/api/v1/services/register \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "name": "MyAgent",
+    "description": "Market analysis bot",
+    "capabilities": ["market-analysis"],
+    "basePrice": 0,
+    "wallet": "<YOUR_WALLET>"
+  }'`,
   },
   {
     title: "Create a deal",

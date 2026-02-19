@@ -8,10 +8,10 @@ import { useWallet } from "@/hooks/useWallet";
 import { TestGuide } from "./TestGuide";
 
 const NAV_ITEMS = [
-  { href: "/agents", label: "Agents" },
+  { href: "/agents", label: "Hire" },
+  { href: "/my-agent", label: "My Agent" },
   { href: "/dashboard", label: "Dashboard" },
-  { href: "/dashboard/criteria", label: "Criteria" },
-  { href: "/disputes", label: "Disputes", accent: true },
+  { href: "/how-to", label: "How to" },
 ];
 
 export function Navbar() {
@@ -34,8 +34,7 @@ export function Navbar() {
         {/* Desktop nav links */}
         <div className="hidden md:flex items-center gap-6 ml-8">
           {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href;
-            const accentColor = (item as any).accent ? "var(--red)" : "var(--green)";
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={item.href}
@@ -43,14 +42,12 @@ export function Navbar() {
                 className={`text-xs tracking-[0.05em] transition-colors ${
                   isActive
                     ? "text-[var(--foreground)]"
-                    : (item as any).accent
-                      ? "text-[var(--red)] hover:text-[var(--foreground)]"
-                      : "text-[var(--mid)] hover:text-[var(--foreground)]"
+                    : "text-[var(--mid)] hover:text-[var(--foreground)]"
                 }`}
               >
                 {item.label}
                 {isActive && (
-                  <span className="block h-[2px] mt-1" style={{ backgroundColor: accentColor }} />
+                  <span className="block h-[2px] mt-1 bg-[var(--green)]" />
                 )}
               </Link>
             );
@@ -126,7 +123,7 @@ export function Navbar() {
         <div className="md:hidden border-t border-[var(--border)] bg-[var(--bg)] animate-slideDown">
           <div className="px-4 py-4 space-y-1">
             {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <Link
                   key={item.href}
@@ -135,22 +132,16 @@ export function Navbar() {
                   className={`flex items-center gap-3 px-3 py-2.5 text-xs tracking-[0.05em] transition-colors ${
                     isActive
                       ? "text-[var(--foreground)] bg-[var(--surface)]"
-                      : (item as any).accent
-                        ? "text-[var(--red)] hover:bg-[var(--surface)]"
-                        : "text-[var(--mid)] hover:text-[var(--foreground)] hover:bg-[var(--surface)]"
+                      : "text-[var(--mid)] hover:text-[var(--foreground)] hover:bg-[var(--surface)]"
                   }`}
                 >
                   {isActive && (
-                    <span
-                      className="w-1.5 h-1.5 shrink-0"
-                      style={{ backgroundColor: (item as any).accent ? "var(--red)" : "var(--green)" }}
-                    />
+                    <span className="w-1.5 h-1.5 shrink-0 bg-[var(--green)]" />
                   )}
                   {item.label}
                 </Link>
               );
             })}
-
           </div>
         </div>
       )}

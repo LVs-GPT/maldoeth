@@ -127,6 +127,13 @@ export class RegistrationService {
       .all() as AgentRow[];
     return rows.map(formatAgent);
   }
+
+  listAgentsByWallet(wallet: string) {
+    const rows = this.db
+      .prepare("SELECT * FROM agents WHERE wallet = ? ORDER BY created_at DESC")
+      .all(wallet) as AgentRow[];
+    return rows.map(formatAgent);
+  }
 }
 
 export class ApiError extends Error {

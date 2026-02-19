@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useWallet } from "@/hooks/useWallet";
 import { PendingApprovalCard } from "@/components/PendingApprovalCard";
 import { DealStatusTable } from "@/components/DealStatusTable";
@@ -72,6 +73,17 @@ export default function DashboardPage() {
         <StatCell label="Completed" value={completedDeals} />
         <StatCell label="Disputed" value={disputedDeals} warn={disputedDeals > 0} />
       </div>
+
+      {/* Disputes link */}
+      {disputedDeals > 0 && (
+        <Link
+          href="/disputes"
+          className="flex items-center gap-2 text-xs text-[var(--red)] hover:text-[var(--foreground)] transition-colors"
+        >
+          <span className="status-dot bg-[var(--red)]" style={{ boxShadow: '0 0 6px var(--red)' }} />
+          {disputedDeals} active dispute{disputedDeals !== 1 ? "s" : ""} — Go to Juror Panel
+        </Link>
+      )}
 
       {/* Pending Approvals */}
       {pendingApprovals.length > 0 && (
