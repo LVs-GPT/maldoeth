@@ -7,14 +7,22 @@ import { config } from "../config.js";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/** Check if an error is an Infura rate-limit */
+function isRateLimitError(err: any): boolean {
+  const msg = err?.message ?? "";
+  return msg.includes("Too Many Requests")
+    || msg.includes("missing response")
+    || err?.code === -32005
+    || err?.code === "BAD_DATA";
+}
+
 /** Retry an async fn with exponential backoff (for Infura rate limits) */
-async function withRetry<T>(fn: () => Promise<T>, maxRetries = 3, baseMs = 2000): Promise<T> {
+async function withRetry<T>(fn: () => Promise<T>, maxRetries = 4, baseMs = 3000): Promise<T> {
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
     } catch (err: any) {
-      const isRateLimit = err?.message?.includes("Too Many Requests") || err?.code === -32005;
-      if (!isRateLimit || attempt === maxRetries) throw err;
+      if (!isRateLimitError(err) || attempt === maxRetries) throw err;
       const delay = baseMs * Math.pow(2, attempt);
       console.warn(`[DealService] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})...`);
       await sleep(delay);
@@ -170,23 +178,34 @@ export class DealService {
     serverAddress: string,
     totalAmount: bigint,
   ): Promise<string> {
-    return withRetry(async () => {
-      const usdc = getUsdc();
-      const escrow = getEscrow();
-      const signerAddress = await getSigner().getAddress();
+    const usdc = getUsdc();
+    const escrow = getEscrow();
+    const signerAddress = await getSigner().getAddress();
 
-      // 1. Approve escrow to spend USDC
+    // Each step retried individually to avoid double-spending on retry
+    // Delays between steps to stay under Infura rate limits
+
+    // 1. Approve escrow to spend USDC
+    await withRetry(async () => {
       const approveTx = await usdc.approve(config.escrowAddress, totalAmount);
       await approveTx.wait();
+    });
 
-      // 2. Transfer USDC to escrow contract
+    await sleep(1500);
+
+    // 2. Transfer USDC to escrow contract
+    await withRetry(async () => {
       const transferTx = await usdc.transfer(config.escrowAddress, totalAmount);
       await transferTx.wait();
+    });
 
-      // 3. Call receivePayment as facilitator.
-      //    Use signer address as on-chain client so the server wallet can call
-      //    completeDeal / dispute (which require msg.sender == deal.client).
-      //    The real client address is tracked in the local DB.
+    await sleep(1500);
+
+    // 3. Call receivePayment as facilitator.
+    //    Use signer address as on-chain client so the server wallet can call
+    //    completeDeal / dispute (which require msg.sender == deal.client).
+    //    The real client address is tracked in the local DB.
+    return withRetry(async () => {
       const paymentTx = await escrow.receivePayment(
         nonce,
         signerAddress,
@@ -194,7 +213,6 @@ export class DealService {
         totalAmount,
       );
       const receipt = await paymentTx.wait();
-
       return receipt?.hash ?? paymentTx.hash;
     });
   }
