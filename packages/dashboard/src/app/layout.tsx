@@ -41,19 +41,14 @@ export default function RootLayout({
           </main>
           <footer className="relative z-[1] border-t border-[var(--border)]">
             <div className="mx-auto max-w-[980px] px-4 py-8 sm:px-8 sm:py-12">
-              <div className="flex items-center justify-between flex-wrap gap-6">
-                <div className="flex flex-col gap-2">
-                  <span className="text-sm font-bold text-[var(--green)]">maldo.eth</span>
-                  <span className="text-[11px] text-[var(--mid)]">
-                    Trust layer for agentic commerce &middot;{" "}
-                    <a href="https://8004.org" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">ERC-8004</a> &middot;{" "}
-                    <a href="https://x402.org" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">x402</a> &middot;{" "}
-                    <a href="https://kleros.io" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">Kleros</a>
-                  </span>
-                </div>
-                <div className="flex gap-6 flex-wrap">
-                  <a href="https://github.com/LVs-GPT/maldoeth" target="_blank" rel="noopener" className="text-xs text-[var(--mid)] hover:text-[var(--foreground)] transition-colors">GitHub</a>
-                </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-sm font-bold text-[var(--green)]">maldo.eth</span>
+                <span className="text-[11px] text-[var(--mid)]">
+                  Trust layer for agentic commerce &middot;{" "}
+                  <a href="https://8004.org" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">ERC-8004</a> &middot;{" "}
+                  <a href="https://x402.org" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">x402</a> &middot;{" "}
+                  <a href="https://kleros.io" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">Kleros</a>
+                </span>
               </div>
             </div>
           </footer>
