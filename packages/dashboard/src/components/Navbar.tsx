@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 
 const NAV_ITEMS = [
+  { href: "/agents", label: "Agents" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/dashboard/criteria", label: "Criteria" },
-  { href: "/agents", label: "Agents" },
   { href: "/disputes", label: "Disputes", accent: true },
 ];
 
