@@ -37,7 +37,10 @@ export const config = {
   get x402FacilitatorUrl() { return process.env.X402_FACILITATOR_URL || "https://www.x402.org/facilitator"; },
 
   // Subgraph URL (The Graph — Subgraph Studio on Sepolia)
-  get subgraphUrl() { return process.env.SUBGRAPH_URL || ""; },
+  get subgraphUrl() { return process.env.SUBGRAPH_URL || "https://api.studio.thegraph.com/query/1742369/maldo-identity/version/latest"; },
+
+  // Escrow deployment block (for full event replay on fresh DB)
+  get escrowStartBlock() { return parseInt(process.env.ESCROW_START_BLOCK || "9989417", 10); },
 
   // CORS — restrict in production, allow all in dev
   get corsOrigin() { return process.env.CORS_ORIGIN || "*"; },
