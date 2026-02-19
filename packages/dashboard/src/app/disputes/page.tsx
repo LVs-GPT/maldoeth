@@ -27,7 +27,6 @@ export default function DisputesPage() {
   const [loading, setLoading] = useState(true);
   const [resolving, setResolving] = useState<string | null>(null);
   const [resolved, setResolved] = useState<Record<string, string>>({});
-  const [confirmRuling, setConfirmRuling] = useState<{ deal: Deal; ruling: number } | null>(null);
 
   const loadData = useCallback(async () => {
     // Only show loading spinner on initial load
@@ -51,10 +50,11 @@ export default function DisputesPage() {
   const { toast } = useToast();
 
   const handleResolve = async (deal: Deal, ruling: number) => {
-    setConfirmRuling(null);
+    const label = RULING_OPTIONS.find((o) => o.value === ruling)?.label || "Unknown";
+    if (!confirm(`Confirm ruling: "${label}" for deal ${deal.nonce.slice(0, 10)}...?`)) return;
+
     setResolving(deal.nonce);
     try {
-      const label = RULING_OPTIONS.find((o) => o.value === ruling)?.label || "Unknown";
       const res = await resolveDispute(deal.nonce, ruling);
       setResolved((prev) => ({ ...prev, [deal.nonce]: label }));
       toast("success", `Dispute resolved: ${label}`, res?.txHash);
@@ -188,7 +188,7 @@ export default function DisputesPage() {
                       {RULING_OPTIONS.map((opt) => (
                         <button
                           key={opt.value}
-                          onClick={() => setConfirmRuling({ deal, ruling: opt.value })}
+                          onClick={() => handleResolve(deal, opt.value)}
                           disabled={resolving === deal.nonce}
                           className="btn min-h-[44px] py-1.5 px-4 text-xs border transition-colors w-full sm:w-auto"
                           style={{
@@ -212,51 +212,6 @@ export default function DisputesPage() {
               </div>
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Ruling confirmation modal — replaces window.confirm() for mobile UX */}
-      {confirmRuling && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setConfirmRuling(null)}>
-          <div className="modal-content">
-            <h2 className="text-base font-bold text-[var(--foreground)]">
-              Confirm Ruling
-            </h2>
-            {(() => {
-              const opt = RULING_OPTIONS.find((o) => o.value === confirmRuling.ruling);
-              return (
-                <>
-                  <p className="mt-3 text-sm font-bold" style={{ color: opt?.color }}>
-                    {opt?.label}
-                  </p>
-                  <p className="mt-1 text-xs text-[var(--mid)]">
-                    {opt?.description}
-                  </p>
-                </>
-              );
-            })()}
-            <p className="mt-3 text-[11px] text-[var(--dim)]">
-              Deal: {confirmRuling.deal.nonce.slice(0, 14)}&hellip;
-              &middot; ${(confirmRuling.deal.amount / 1e6).toFixed(2)} USDC
-            </p>
-
-            <hr className="section-rule my-5" />
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmRuling(null)}
-                className="btn btn-ghost flex-1 min-h-[44px]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleResolve(confirmRuling.deal, confirmRuling.ruling)}
-                className="btn btn-primary flex-1 min-h-[44px]"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
         </div>
       )}
 

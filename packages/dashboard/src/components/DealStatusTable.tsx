@@ -34,17 +34,12 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
   const [completing, setCompleting] = useState<string | null>(null);
   const [disputing, setDisputing] = useState<string | null>(null);
   const [ratingDeal, setRatingDeal] = useState<Deal | null>(null);
-  const [confirmingDispute, setConfirmingDispute] = useState<Deal | null>(null);
-  // Optimistic status overrides so the UI updates instantly after actions
-  const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   const handleComplete = async (deal: Deal) => {
     setCompleting(deal.nonce);
     try {
       const res = await completeDeal(deal.nonce);
-      // Optimistic update — show new status immediately
-      setStatusOverrides((prev) => ({ ...prev, [deal.nonce]: "Completed" }));
       toast("success", "Deal completed. Funds released.", res?.txHash);
       setRatingDeal(deal);
       onUpdate?.();
@@ -56,12 +51,10 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
   };
 
   const handleDispute = async (deal: Deal) => {
-    setConfirmingDispute(null);
+    if (!confirm("Open a dispute for this deal? This will freeze the USDC and pay an arbitration fee.")) return;
     setDisputing(deal.nonce);
     try {
       const res = await disputeDeal(deal.nonce);
-      // Optimistic update — show new status immediately
-      setStatusOverrides((prev) => ({ ...prev, [deal.nonce]: "Disputed" }));
       toast("info", "Dispute opened. Funds frozen until ruling.", res?.txHash);
       onUpdate?.();
     } catch (err: any) {
@@ -71,14 +64,7 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
     }
   };
 
-  // Apply optimistic overrides to deals for rendering
-  const visibleDeals = deals.map((deal) =>
-    statusOverrides[deal.nonce]
-      ? { ...deal, status: statusOverrides[deal.nonce] }
-      : deal,
-  );
-
-  if (visibleDeals.length === 0) {
+  if (deals.length === 0) {
     return (
       <div className="bg-[var(--surface)] border border-[var(--border)] p-10 text-center">
         <p className="text-sm text-[var(--mid)]">
@@ -115,7 +101,7 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
             </tr>
           </thead>
           <tbody>
-            {visibleDeals.map((deal) => (
+            {deals.map((deal) => (
               <tr key={deal.nonce}>
                 <td className="text-center text-xs tabular-nums text-[var(--mid)]">
                   {deal.nonce.slice(0, 10)}&hellip;
@@ -141,7 +127,7 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
                     completing={completing}
                     disputing={disputing}
                     onComplete={handleComplete}
-                    onDispute={setConfirmingDispute}
+                    onDispute={handleDispute}
                     onRate={setRatingDeal}
                   />
                 </td>
@@ -153,7 +139,7 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
 
       {/* Mobile card list */}
       <div className="md:hidden space-y-3">
-        {visibleDeals.map((deal) => (
+        {deals.map((deal) => (
           <div
             key={deal.nonce}
             className="border border-[var(--border)] bg-[var(--bg)] overflow-hidden"
@@ -198,49 +184,13 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
                 completing={completing}
                 disputing={disputing}
                 onComplete={handleComplete}
-                onDispute={setConfirmingDispute}
+                onDispute={handleDispute}
                 onRate={setRatingDeal}
               />
             </div>
           </div>
         ))}
       </div>
-
-      {/* Dispute confirmation modal — replaces window.confirm() for mobile UX */}
-      {confirmingDispute && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setConfirmingDispute(null)}>
-          <div className="modal-content">
-            <h2 className="text-base font-bold text-[var(--foreground)]">
-              Open Dispute
-            </h2>
-            <p className="mt-2 text-xs text-[var(--mid)] leading-relaxed">
-              This will freeze the USDC in escrow and pay an arbitration fee.
-              A juror will review and rule on the dispute.
-            </p>
-            <p className="mt-3 text-[11px] text-[var(--dim)]">
-              Deal: {confirmingDispute.nonce.slice(0, 14)}&hellip;
-              &middot; ${(confirmingDispute.amount / 1e6).toFixed(2)} USDC
-            </p>
-
-            <hr className="section-rule my-5" />
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmingDispute(null)}
-                className="btn btn-ghost flex-1 min-h-[44px]"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => handleDispute(confirmingDispute)}
-                className="btn btn-danger flex-1 min-h-[44px]"
-              >
-                Confirm Dispute
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {ratingDeal && userAddress && (
         <RateAgentModal
