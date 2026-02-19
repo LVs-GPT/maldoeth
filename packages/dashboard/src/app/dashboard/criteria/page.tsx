@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
+import { useWallet } from "@/hooks/useWallet";
 import { getCriteria, setCriteria } from "@/lib/api";
 
 const PRESETS = [
@@ -51,7 +51,7 @@ const IMPACT_TEXT: Record<string, string> = {
 };
 
 export default function CriteriaPage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useWallet();
   const [currentPreset, setCurrentPreset] = useState("Conservative");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -86,7 +86,7 @@ export default function CriteriaPage() {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-24">
         <p className="text-sm text-[var(--mid)]">
-          Connect your wallet to manage criteria.
+          Sign in to manage criteria.
         </p>
       </div>
     );
