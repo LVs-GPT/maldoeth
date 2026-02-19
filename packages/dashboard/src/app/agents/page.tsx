@@ -14,6 +14,8 @@ const CAPABILITIES = [
   "oracle",
 ];
 
+const PAGE_SIZE = 60;
+
 export default function AgentsPage() {
   const [capability, setCapability] = useState("");
   const [agents, setAgents] = useState<any[]>([]);
@@ -21,6 +23,7 @@ export default function AgentsPage() {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
   const loadAgents = async (cap?: string) => {
     setLoading(true);
@@ -42,18 +45,21 @@ export default function AgentsPage() {
     e.preventDefault();
     if (!capability.trim()) return;
     setActiveFilter(capability.trim());
+    setPage(0);
     loadAgents(capability.trim());
   };
 
   const handleFilter = async (cap: string) => {
     setCapability(cap);
     setActiveFilter(cap);
+    setPage(0);
     loadAgents(cap);
   };
 
   const handleShowAll = async () => {
     setCapability("");
     setActiveFilter(null);
+    setPage(0);
     loadAgents();
   };
 
@@ -91,6 +97,8 @@ export default function AgentsPage() {
     }
   };
 
+  const sorted = [...agents].sort((a, b) => (b.reputation?.bayesianScore ?? 0) - (a.reputation?.bayesianScore ?? 0));
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
   const chainCount = agents.filter((a) => a.source === "chain").length;
   const seedCount = agents.filter((a) => a.source !== "chain").length;
 
@@ -197,13 +205,38 @@ export default function AgentsPage() {
             </p>
           </div>
         ) : !loading ? (
-          <div className="grid gap-px bg-[var(--border)] sm:grid-cols-2 lg:grid-cols-3">
-            {[...agents]
-              .sort((a, b) => (b.reputation?.bayesianScore ?? 0) - (a.reputation?.bayesianScore ?? 0))
-              .map((agent: any) => (
-              <AgentCard key={agent.agentId} agent={agent} />
-            ))}
-          </div>
+          <>
+            <div className="grid gap-px sm:grid-cols-2 lg:grid-cols-3">
+              {sorted
+                .slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
+                .map((agent: any) => (
+                <div key={agent.agentId} className="border border-[var(--border)]">
+                  <AgentCard agent={agent} />
+                </div>
+              ))}
+            </div>
+            {totalPages > 1 && (
+              <div className="mt-6 flex items-center justify-center gap-4">
+                <button
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="btn btn-ghost text-xs disabled:opacity-30"
+                >
+                  &larr; Prev
+                </button>
+                <span className="text-[11px] tabular-nums text-[var(--mid)]">
+                  {page + 1} / {totalPages}
+                </span>
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                  className="btn btn-ghost text-xs disabled:opacity-30"
+                >
+                  Next &rarr;
+                </button>
+              </div>
+            )}
+          </>
         ) : null}
       </div>
     </div>

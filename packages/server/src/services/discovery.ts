@@ -72,7 +72,7 @@ export class DiscoveryService {
   ) {}
 
   async discover(params: DiscoverParams) {
-    const limit = params.limit ?? 500;
+    const limit = params.limit;
 
     // Query agents from DB
     let rows: AgentRow[];
@@ -143,6 +143,6 @@ export class DiscoveryService {
     // Sort by rank score descending (established agents first)
     filtered.sort((a, b) => b.rankScore - a.rankScore);
 
-    return filtered.slice(0, limit);
+    return limit ? filtered.slice(0, limit) : filtered;
   }
 }
