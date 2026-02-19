@@ -38,9 +38,9 @@ export default function RootLayout({
                   <span className="text-sm font-bold text-[var(--green)]">maldo.eth</span>
                   <span className="text-[11px] text-[var(--mid)]">
                     Trust layer for agentic commerce &middot;{" "}
-                    <a href="https://sepolia.etherscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">ERC-8004</a> &middot;{" "}
-                    <a href="https://sepolia.etherscan.io/address/0x050F6703697727BdE54a8A753a18A1E269F58209" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">x402</a> &middot;{" "}
-                    <a href="https://sepolia.etherscan.io/address/0x05D54DB4F36dCcf095B0945eB4dDD014bAe17FC2" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">Kleros</a>
+                    <a href="https://8004.org" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">ERC-8004</a> &middot;{" "}
+                    <a href="https://x402.org" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">x402</a> &middot;{" "}
+                    <a href="https://kleros.io" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">Kleros</a>
                   </span>
                 </div>
                 <div className="flex gap-6 flex-wrap">

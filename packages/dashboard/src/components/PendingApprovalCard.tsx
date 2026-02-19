@@ -22,13 +22,17 @@ export function PendingApprovalCard({
   onAction: () => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const failedChecks: string[] = JSON.parse(approval.failed_checks || "[]");
 
   const handleApprove = async () => {
     setLoading(true);
+    setError(null);
     try {
       await approveDeal(approval.id);
       onAction();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Approval failed");
     } finally {
       setLoading(false);
     }
@@ -36,9 +40,12 @@ export function PendingApprovalCard({
 
   const handleReject = async () => {
     setLoading(true);
+    setError(null);
     try {
       await rejectDeal(approval.id);
       onAction();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Rejection failed");
     } finally {
       setLoading(false);
     }
@@ -85,6 +92,13 @@ export function PendingApprovalCard({
               {check}
             </span>
           ))}
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div className="mb-4 rounded border border-[rgba(255,68,68,0.3)] bg-[rgba(255,68,68,0.08)] px-3 py-2">
+          <p className="text-[11px] text-[var(--red)]">{error}</p>
         </div>
       )}
 

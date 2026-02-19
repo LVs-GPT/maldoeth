@@ -91,14 +91,19 @@ export class DealService {
     );
 
     if (!evaluation.autoApprove) {
+      const agentRow = this.db
+        .prepare("SELECT name FROM agents WHERE agent_id = ?")
+        .get(params.agentId) as { name: string } | undefined;
+
       const result = this.db
         .prepare(
-          `INSERT INTO pending_approvals (principal, agent_id, price_usdc, task_description, failed_checks)
-           VALUES (?, ?, ?, ?, ?)`,
+          `INSERT INTO pending_approvals (principal, agent_id, agent_name, price_usdc, task_description, failed_checks)
+           VALUES (?, ?, ?, ?, ?, ?)`,
         )
         .run(
           principal.toLowerCase(),
           params.agentId,
+          agentRow?.name || null,
           params.priceUSDC,
           params.taskDescription || "",
           JSON.stringify(evaluation.failedChecks),
