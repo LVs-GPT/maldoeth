@@ -137,11 +137,13 @@ export class DealService {
       totalAmount,
     );
 
-    // Store in local DB immediately (EventListener will update with dealId)
+    // Store in local DB immediately (EventListener may have already inserted via DealFunded event)
     this.db
       .prepare(
         `INSERT INTO deals (nonce, client, server, amount, status, task_description)
-         VALUES (?, ?, ?, ?, 'Funded', ?)`,
+         VALUES (?, ?, ?, ?, 'Funded', ?)
+         ON CONFLICT(nonce) DO UPDATE SET
+           task_description = excluded.task_description`,
       )
       .run(
         nonce,
@@ -193,7 +195,7 @@ export class DealService {
       );
       const receipt = await paymentTx.wait();
 
-      return receipt.hash;
+      return receipt?.hash ?? paymentTx.hash;
     });
   }
 
@@ -275,7 +277,7 @@ export class DealService {
     // EventListener will update status, but set it here for immediate response
     this.db.prepare("UPDATE deals SET status = 'Completed' WHERE nonce = ?").run(nonce);
 
-    return { nonce, status: "Completed", txHash: receipt.hash };
+    return { nonce, status: "Completed", txHash: receipt?.hash ?? tx.hash };
   }
 
   /**
@@ -300,7 +302,7 @@ export class DealService {
     // EventListener will update status
     this.db.prepare("UPDATE deals SET status = 'Disputed' WHERE nonce = ?").run(nonce);
 
-    return { nonce, status: "Disputed", txHash: receipt.hash, arbitrationCost: arbitrationCost.toString() };
+    return { nonce, status: "Disputed", txHash: receipt?.hash ?? tx.hash, arbitrationCost: arbitrationCost.toString() };
   }
 
   /**
@@ -341,7 +343,7 @@ export class DealService {
       nonce,
       status: "Resolved",
       ruling: rulingLabel,
-      txHash: receipt.hash,
+      txHash: receipt?.hash ?? tx.hash,
       arbitratorDisputeId: arbitratorDisputeId.toString(),
     };
   }
@@ -390,7 +392,9 @@ export class DealService {
       this.db
         .prepare(
           `INSERT INTO deals (nonce, client, server, amount, status, task_description)
-           VALUES (?, ?, ?, ?, 'Funded', ?)`,
+           VALUES (?, ?, ?, ?, 'Funded', ?)
+           ON CONFLICT(nonce) DO UPDATE SET
+             task_description = excluded.task_description`,
         )
         .run(
           nonce,
