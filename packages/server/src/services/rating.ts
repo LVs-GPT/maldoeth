@@ -58,9 +58,16 @@ export class RatingService {
       throw new ApiError(400, "Can only rate completed deals");
     }
 
-    // Validate rater was a participant
+    // Validate rater was a participant.
+    // deal.server may be an agentId (not a wallet), so also check the agent's wallet.
     const raterLower = params.raterAddress.toLowerCase();
-    if (raterLower !== deal.client && raterLower !== deal.server) {
+    const agentWallet = (this.db
+      .prepare("SELECT wallet FROM agents WHERE agent_id = ?")
+      .get(deal.server) as { wallet: string } | undefined)?.wallet?.toLowerCase();
+
+    const isClient = raterLower === deal.client?.toLowerCase();
+    const isServer = raterLower === deal.server?.toLowerCase() || raterLower === agentWallet;
+    if (!isClient && !isServer) {
       throw new ApiError(403, "Only deal participants can submit ratings");
     }
 

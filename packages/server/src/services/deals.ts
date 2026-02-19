@@ -146,11 +146,14 @@ export class DealService {
     );
 
     // Store in local DB immediately (EventListener may have already inserted via DealFunded event)
+    // On conflict: restore real client/server/task_description (EventListener stores on-chain addresses)
     this.db
       .prepare(
         `INSERT INTO deals (nonce, client, server, amount, status, task_description)
          VALUES (?, ?, ?, ?, 'Funded', ?)
          ON CONFLICT(nonce) DO UPDATE SET
+           client = excluded.client,
+           server = excluded.server,
            task_description = excluded.task_description`,
       )
       .run(
@@ -412,6 +415,8 @@ export class DealService {
           `INSERT INTO deals (nonce, client, server, amount, status, task_description)
            VALUES (?, ?, ?, ?, 'Funded', ?)
            ON CONFLICT(nonce) DO UPDATE SET
+             client = excluded.client,
+             server = excluded.server,
              task_description = excluded.task_description`,
         )
         .run(

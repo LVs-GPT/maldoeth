@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AgentCard } from "@/components/AgentCard";
-import { discoverAgents, listAgents } from "@/lib/api";
+import { discoverAgents } from "@/lib/api";
 
 const CAPABILITIES = [
   "market-analysis",
@@ -19,7 +19,7 @@ export default function AgentsPage() {
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
   useEffect(() => {
-    listAgents()
+    discoverAgents()
       .then((data) => setAgents(data.agents || []))
       .catch(() => setAgents([]))
       .finally(() => setLoading(false));
@@ -59,7 +59,7 @@ export default function AgentsPage() {
     setActiveFilter(null);
     setLoading(true);
     try {
-      const data = await listAgents();
+      const data = await discoverAgents();
       setAgents(data.agents || []);
     } catch {
       setAgents([]);
