@@ -10,7 +10,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * This avoids scanning millions of empty blocks from genesis.
  * Override via IDENTITY_START_BLOCK env var.
  */
-const DEFAULT_START_BLOCK = 9_980_000;
+const DEFAULT_START_BLOCK = 9_989_417;
 
 /**
  * Syncs ERC-8004 Identity NFTs from Sepolia into the local agents table.
