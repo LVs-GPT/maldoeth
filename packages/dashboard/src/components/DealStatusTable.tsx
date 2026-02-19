@@ -86,24 +86,24 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
           </colgroup>
           <thead>
             <tr>
-              <th>Nonce</th>
-              <th>Server</th>
-              <th className="text-right">Amount</th>
+              <th className="text-center">Nonce</th>
+              <th className="text-center">Server</th>
+              <th className="text-center">Amount</th>
               <th className="text-center">Status</th>
-              <th>Date</th>
+              <th className="text-center">Date</th>
               <th className="text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
             {deals.map((deal) => (
               <tr key={deal.nonce}>
-                <td className="text-xs tabular-nums text-[var(--mid)]">
+                <td className="text-center text-xs tabular-nums text-[var(--mid)]">
                   {deal.nonce.slice(0, 10)}&hellip;
                 </td>
-                <td className="text-xs tabular-nums text-[var(--mid)]">
+                <td className="text-center text-xs tabular-nums text-[var(--mid)]">
                   {deal.server.slice(0, 10)}&hellip;
                 </td>
-                <td className="text-right text-sm tabular-nums text-[var(--foreground)]">
+                <td className="text-center text-sm tabular-nums text-[var(--foreground)]">
                   ${(deal.amount / 1e6).toFixed(2)}
                 </td>
                 <td className="text-center">
@@ -111,7 +111,7 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
                     {deal.status}
                   </span>
                 </td>
-                <td className="text-xs tabular-nums text-[var(--dim)]">
+                <td className="text-center text-xs tabular-nums text-[var(--dim)]">
                   {new Date(deal.created_at).toLocaleDateString()}
                 </td>
                 <td className="text-center">

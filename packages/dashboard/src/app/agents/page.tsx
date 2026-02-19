@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AgentCard } from "@/components/AgentCard";
-import { discoverAgents } from "@/lib/api";
+import { discoverAgents, syncAgents } from "@/lib/api";
 
 const CAPABILITIES = [
   "market-analysis",
@@ -18,67 +18,92 @@ export default function AgentsPage() {
   const [capability, setCapability] = useState("");
   const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<string | null>(null);
 
+  const loadAgents = async (cap?: string) => {
+    setLoading(true);
+    try {
+      const data = await discoverAgents(cap, 100);
+      setAgents(data.agents || []);
+    } catch {
+      setAgents([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    discoverAgents()
-      .then((data) => setAgents(data.agents || []))
-      .catch(() => setAgents([]))
-      .finally(() => setLoading(false));
+    loadAgents();
   }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!capability.trim()) return;
-    setLoading(true);
     setActiveFilter(capability.trim());
-    try {
-      const data = await discoverAgents(capability.trim());
-      setAgents(data.agents || []);
-    } catch {
-      setAgents([]);
-    } finally {
-      setLoading(false);
-    }
+    loadAgents(capability.trim());
   };
 
   const handleFilter = async (cap: string) => {
     setCapability(cap);
     setActiveFilter(cap);
-    setLoading(true);
-    try {
-      const data = await discoverAgents(cap);
-      setAgents(data.agents || []);
-    } catch {
-      setAgents([]);
-    } finally {
-      setLoading(false);
-    }
+    loadAgents(cap);
   };
 
   const handleShowAll = async () => {
     setCapability("");
     setActiveFilter(null);
-    setLoading(true);
+    loadAgents();
+  };
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncResult(null);
     try {
-      const data = await discoverAgents();
-      setAgents(data.agents || []);
-    } catch {
-      setAgents([]);
+      const data = await syncAgents();
+      if (data.status === "already_running") {
+        setSyncResult("Sync already in progress...");
+      } else {
+        setSyncResult(`Synced ${data.synced} new agent${data.synced !== 1 ? "s" : ""} from Sepolia`);
+        // Reload agents after sync
+        await loadAgents(activeFilter || undefined);
+      }
+    } catch (err: any) {
+      setSyncResult(`Sync failed: ${err.message}`);
     } finally {
-      setLoading(false);
+      setSyncing(false);
     }
   };
+
+  const chainCount = agents.filter((a) => a.source === "chain").length;
+  const seedCount = agents.filter((a) => a.source !== "chain").length;
 
   return (
     <div className="space-y-10 pt-16">
       {/* Header */}
-      <header>
-        <div className="section-label">Discover Agents</div>
-        <p className="mt-2 text-[13px] text-[var(--mid)] leading-[1.7] max-w-[580px]">
-          All ERC-8004 registered agents on Sepolia. Filter by capability or browse the full registry.
-        </p>
+      <header className="flex items-start justify-between">
+        <div>
+          <div className="section-label">Discover Agents</div>
+          <p className="mt-2 text-[13px] text-[var(--mid)] leading-[1.7] max-w-[580px]">
+            All ERC-8004 registered agents on Sepolia. Filter by capability or browse the full registry.
+          </p>
+        </div>
+        <button
+          onClick={handleSync}
+          disabled={syncing}
+          className="btn btn-ghost text-xs whitespace-nowrap"
+        >
+          {syncing ? "Syncing..." : "Sync from Sepolia"}
+        </button>
       </header>
+
+      {/* Sync result message */}
+      {syncResult && (
+        <p className={`text-[11px] ${syncResult.includes("failed") ? "text-[var(--red)]" : "text-[var(--green)]"}`}>
+          {syncResult}
+        </p>
+      )}
 
       {/* Search */}
       <form onSubmit={handleSearch} className="flex gap-3">
@@ -129,11 +154,24 @@ export default function AgentsPage() {
 
       {/* Results */}
       <div>
-        <p className="mb-4 text-[11px] text-[var(--mid)]">
-          {loading
-            ? "Loading\u2026"
-            : `${agents.length} agent${agents.length !== 1 ? "s" : ""} ${activeFilter ? `matching \u201c${activeFilter}\u201d` : "registered on Sepolia"}`}
-        </p>
+        <div className="mb-4 flex items-center gap-3">
+          <p className="text-[11px] text-[var(--mid)]">
+            {loading
+              ? "Loading\u2026"
+              : `${agents.length} agent${agents.length !== 1 ? "s" : ""} ${activeFilter ? `matching \u201c${activeFilter}\u201d` : "registered"}`}
+          </p>
+          {!loading && agents.length > 0 && (
+            <p className="text-[10px] text-[var(--dim)]">
+              {chainCount > 0 && (
+                <span className="text-[var(--blue)]">{chainCount} on-chain</span>
+              )}
+              {chainCount > 0 && seedCount > 0 && " + "}
+              {seedCount > 0 && (
+                <span>{seedCount} seed</span>
+              )}
+            </p>
+          )}
+        </div>
 
         {!loading && agents.length === 0 ? (
           <div className="bg-[var(--surface)] border border-[var(--border)] p-10 text-center">

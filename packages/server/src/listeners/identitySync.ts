@@ -30,7 +30,8 @@ export class IdentitySync {
     this.provider = provider ?? new ethers.JsonRpcProvider(config.sepoliaRpcUrl);
     this.identity = new ethers.Contract(config.identityRegistry, ERC8004_IDENTITY_ABI, this.provider);
     this.reputation = new ethers.Contract(config.reputationRegistry, ERC8004_REPUTATION_ABI, this.provider);
-    this.lookback = lookback ?? parseInt(process.env.IDENTITY_LOOKBACK_BLOCKS || "500000", 10);
+    // Default: scan ALL history (0 = from genesis). Override via IDENTITY_LOOKBACK_BLOCKS.
+    this.lookback = lookback ?? parseInt(process.env.IDENTITY_LOOKBACK_BLOCKS || "0", 10);
   }
 
   async sync(): Promise<number> {
@@ -38,16 +39,17 @@ export class IdentitySync {
     console.log(`[IdentitySync] Contract: ${config.identityRegistry}`);
 
     const currentBlock = await this.provider.getBlockNumber();
-    const fromBlock = Math.max(0, currentBlock - this.lookback);
+    const fromBlock = this.lookback === 0 ? 0 : Math.max(0, currentBlock - this.lookback);
 
-    console.log(`[IdentitySync] Scanning blocks ${fromBlock}–${currentBlock} (${this.lookback} blocks lookback)`);
+    console.log(`[IdentitySync] Scanning blocks ${fromBlock}–${currentBlock} (${this.lookback === 0 ? "full history" : `${this.lookback} blocks lookback`})`);
 
     // Scan Transfer events from address(0) = mints
     const mintFilter = this.identity.filters.Transfer(ethers.ZeroAddress);
 
     // Chunk size and delay tuned for Infura free tier
-    const CHUNK_SIZE = 5_000;
-    const DELAY_MS = 600;
+    // Larger chunks for full-history scans, smaller for targeted lookbacks
+    const CHUNK_SIZE = 50_000;
+    const DELAY_MS = 300;
     const allEvents: ethers.EventLog[] = [];
 
     const totalChunks = Math.ceil((currentBlock - fromBlock) / CHUNK_SIZE);
@@ -107,7 +109,9 @@ export class IdentitySync {
         if (agent) {
           this.upsertAgent(agent);
           synced++;
-          console.log(`[IdentitySync] Synced agent #${agentId}: ${agent.name}`);
+          console.log(`[IdentitySync] Synced agent #${agentId}: ${agent.name} (caps: ${agent.capabilities.join(", ") || "none"})`);
+        } else {
+          console.warn(`[IdentitySync] Token #${agentId}: no valid metadata (name missing)`);
         }
       } catch (err: any) {
         console.warn(`[IdentitySync] Failed to sync token #${agentId}:`, err.message);
@@ -125,7 +129,14 @@ export class IdentitySync {
     // Get metadata from tokenURI
     const uri: string = await this.identity.tokenURI(agentId);
     const metadata = await this.resolveMetadata(uri);
-    if (!metadata || !metadata.name) return null;
+
+    if (!metadata) {
+      console.warn(`[IdentitySync] Token #${agentId}: could not resolve URI: ${uri.slice(0, 80)}...`);
+      return null;
+    }
+
+    // Flexible name extraction — different ERC-8004 implementations use different fields
+    const name = metadata.name || metadata.agentName || metadata.title || `Agent #${agentId}`;
 
     // Get on-chain reputation
     let repScore = 0;
@@ -138,13 +149,35 @@ export class IdentitySync {
       // No reputation data yet
     }
 
+    // Flexible capability extraction
+    const capabilities =
+      metadata.capabilities ||
+      metadata.services?.map((s: any) => s.name || s.type) ||
+      metadata.skills ||
+      metadata.tags ||
+      [];
+
+    // Flexible price extraction
+    const basePrice = parseInt(
+      metadata.pricing?.base || metadata.basePrice || metadata.price || "0",
+      10,
+    );
+
+    // Flexible endpoint extraction
+    const endpoint =
+      metadata.endpoint ||
+      metadata.services?.[0]?.endpoint ||
+      metadata.url ||
+      metadata.api ||
+      "";
+
     return {
       agentId,
-      name: metadata.name,
+      name,
       description: metadata.description || "",
-      capabilities: metadata.capabilities || metadata.services?.map((s: any) => s.name) || [],
-      basePrice: parseInt(metadata.pricing?.base || metadata.basePrice || "0", 10),
-      endpoint: metadata.endpoint || metadata.services?.[0]?.endpoint || "",
+      capabilities: Array.isArray(capabilities) ? capabilities : [],
+      basePrice,
+      endpoint,
       wallet: owner.toLowerCase(),
       ipfsUri: uri,
       repScore,
