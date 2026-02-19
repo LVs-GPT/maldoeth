@@ -25,7 +25,7 @@ export default function AgentsPage() {
   const loadAgents = async (cap?: string) => {
     setLoading(true);
     try {
-      const data = await discoverAgents(cap, 100);
+      const data = await discoverAgents(cap);
       setAgents(data.agents || []);
     } catch {
       setAgents([]);
