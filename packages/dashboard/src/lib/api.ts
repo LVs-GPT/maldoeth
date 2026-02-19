@@ -43,6 +43,10 @@ export async function getAgentVouches(agentId: string) {
   return fetchApi(`/api/v1/agents/${agentId}/vouches`);
 }
 
+export async function syncAgents() {
+  return fetchApi("/api/v1/agents/sync", { method: "POST" });
+}
+
 // ─── Deals ──────────────────────────────────────────────────────────
 
 export async function listDeals() {
