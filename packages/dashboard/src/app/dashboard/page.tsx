@@ -22,7 +22,16 @@ export default function DashboardPage() {
           ? getPendingApprovals(address).catch(() => ({ pendingApprovals: [] }))
           : { pendingApprovals: [] },
       ]);
-      setDeals(dealsData.deals || []);
+      const allDeals = dealsData.deals || [];
+      // Filter to only show deals involving the connected wallet
+      const myDeals = address
+        ? allDeals.filter(
+            (d: any) =>
+              d.clientAddress?.toLowerCase() === address.toLowerCase() ||
+              d.serverAddress?.toLowerCase() === address.toLowerCase(),
+          )
+        : allDeals;
+      setDeals(myDeals);
       setPendingApprovals(pendingData.approvals || pendingData.pendingApprovals || []);
     } finally {
       setLoading(false);
@@ -60,7 +69,7 @@ export default function DashboardPage() {
     <div className="space-y-8 pt-14 sm:space-y-12 sm:pt-16">
       {/* Header */}
       <header>
-        <div className="section-label">Dashboard</div>
+        <div className="section-label">My Dashboard</div>
         <p className="text-xs text-[var(--mid)]">
           {address?.slice(0, 6)}&hellip;{address?.slice(-4)}
         </p>
