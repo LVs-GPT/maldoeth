@@ -61,6 +61,7 @@ export class EscrowEventListener {
   private provider: ethers.JsonRpcProvider;
   private contract: ethers.Contract;
   private running = false;
+  private adaptiveChunkSize = 2_000; // auto-reduces on RPC range errors
 
   constructor(
     private db: Database.Database,
@@ -135,21 +136,20 @@ export class EscrowEventListener {
 
   /**
    * Full replay from escrow deployment block — used on fresh DB so deals survive redeploys.
-   * Chunks queries to stay within public RPC limits.
+   * Uses adaptive chunk sizing to stay within public RPC limits (some free tiers only allow 10 blocks).
    */
   private async replayAllEvents(): Promise<void> {
     try {
       const fromBlock = config.escrowStartBlock;
       const currentBlock = await this.provider.getBlockNumber();
-      const CHUNK = 50_000;
-      const totalChunks = Math.ceil((currentBlock - fromBlock) / CHUNK);
 
-      console.log(`[EventListener] Full replay from block ${fromBlock} to ${currentBlock} (~${totalChunks} chunks)...`);
+      console.log(`[EventListener] Full replay from block ${fromBlock} to ${currentBlock}...`);
 
       const allEvents: ethers.EventLog[] = [];
+      let chunkSize = this.adaptiveChunkSize;
 
-      for (let from = fromBlock; from <= currentBlock; from += CHUNK) {
-        const to = Math.min(from + CHUNK - 1, currentBlock);
+      for (let from = fromBlock; from <= currentBlock; ) {
+        const to = Math.min(from + chunkSize - 1, currentBlock);
         try {
           const [funded, completed, disputed, resolved, refunded] = await Promise.all([
             this.contract.queryFilter(this.contract.filters.DealFunded(), from, to),
@@ -161,10 +161,19 @@ export class EscrowEventListener {
           for (const e of [...funded, ...completed, ...disputed, ...resolved, ...refunded]) {
             if ("args" in e) allEvents.push(e as ethers.EventLog);
           }
+          from += chunkSize;
         } catch (err) {
-          console.warn(`[EventListener] Chunk ${from}-${to} failed: ${(err as Error).message}`);
+          const msg = (err as Error).message || "";
+          if (chunkSize > 10 && (msg.includes("block range") || msg.includes("-32600") || msg.includes("10 block"))) {
+            chunkSize = Math.max(10, Math.floor(chunkSize / 4));
+            this.adaptiveChunkSize = chunkSize;
+            console.warn(`[EventListener] RPC range limit hit — reducing chunk to ${chunkSize} blocks`);
+            continue; // retry same `from` with smaller chunk
+          }
+          console.warn(`[EventListener] Chunk ${from}-${to} failed: ${msg.slice(0, 120)}`);
+          from += chunkSize; // skip on non-range errors
         }
-        if (from + CHUNK <= currentBlock) await sleep(350);
+        if (from <= currentBlock) await sleep(200);
       }
 
       allEvents.sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index);
@@ -212,21 +221,39 @@ export class EscrowEventListener {
   private async replayRecentBlocks(blockCount: number): Promise<void> {
     try {
       const currentBlock = await this.provider.getBlockNumber();
-      const fromBlock = Math.max(0, currentBlock - blockCount);
-      console.log(`[EventListener] Replaying events from block ${fromBlock} to ${currentBlock}...`);
+      const startBlock = Math.max(0, currentBlock - blockCount);
+      console.log(`[EventListener] Replaying events from block ${startBlock} to ${currentBlock}...`);
 
-      // Replay ALL event types and process in block order so final status is correct
-      const [funded, completed, disputed, resolved, refunded] = await Promise.all([
-        this.contract.queryFilter(this.contract.filters.DealFunded(), fromBlock, currentBlock),
-        this.contract.queryFilter(this.contract.filters.DealCompleted(), fromBlock, currentBlock),
-        this.contract.queryFilter(this.contract.filters.DisputeInitiated(), fromBlock, currentBlock),
-        this.contract.queryFilter(this.contract.filters.DisputeResolved(), fromBlock, currentBlock),
-        this.contract.queryFilter(this.contract.filters.DealRefunded(), fromBlock, currentBlock),
-      ]);
+      const allEvents: (ethers.EventLog | ethers.Log)[] = [];
+      let chunkSize = this.adaptiveChunkSize;
 
-      // Merge and sort by block number then log index for correct ordering
-      const allEvents = [...funded, ...completed, ...disputed, ...resolved, ...refunded]
-        .sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index);
+      for (let from = startBlock; from <= currentBlock; ) {
+        const to = Math.min(from + chunkSize - 1, currentBlock);
+        try {
+          const [funded, completed, disputed, resolved, refunded] = await Promise.all([
+            this.contract.queryFilter(this.contract.filters.DealFunded(), from, to),
+            this.contract.queryFilter(this.contract.filters.DealCompleted(), from, to),
+            this.contract.queryFilter(this.contract.filters.DisputeInitiated(), from, to),
+            this.contract.queryFilter(this.contract.filters.DisputeResolved(), from, to),
+            this.contract.queryFilter(this.contract.filters.DealRefunded(), from, to),
+          ]);
+          allEvents.push(...funded, ...completed, ...disputed, ...resolved, ...refunded);
+          from += chunkSize;
+        } catch (err) {
+          const msg = (err as Error).message || "";
+          if (chunkSize > 10 && (msg.includes("block range") || msg.includes("-32600") || msg.includes("10 block"))) {
+            chunkSize = Math.max(10, Math.floor(chunkSize / 4));
+            this.adaptiveChunkSize = chunkSize;
+            console.warn(`[EventListener] RPC range limit hit — reducing chunk to ${chunkSize} blocks`);
+            continue;
+          }
+          console.warn(`[EventListener] Replay chunk ${from}-${to} failed: ${msg.slice(0, 120)}`);
+          from += chunkSize;
+        }
+        if (from <= currentBlock) await sleep(200);
+      }
+
+      allEvents.sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index);
 
       for (const event of allEvents) {
         if (!("args" in event) || !event.args) continue;
@@ -261,7 +288,7 @@ export class EscrowEventListener {
         }
       }
 
-      console.log(`[EventListener] Replayed ${allEvents.length} events (${funded.length} funded, ${completed.length} completed, ${disputed.length} disputed, ${resolved.length} resolved, ${refunded.length} refunded).`);
+      console.log(`[EventListener] Replayed ${allEvents.length} events.`);
     } catch (err) {
       console.error("[EventListener] Replay failed:", err);
     }

@@ -198,58 +198,54 @@ export class IdentitySync {
     console.log(`[IdentitySync] Scanning blocks ${fromBlock}–${currentBlock} (~${((currentBlock - fromBlock) / 1000).toFixed(0)}k blocks)`);
 
     const registeredFilter = this.identity.filters.Registered();
-    const CHUNK_SIZE = 50_000;
-    const DELAY_MS = 350;
+    let chunkSize = 2_000; // adaptive — shrinks on RPC range errors
+    const DELAY_MS = 200;
     const allEvents: ethers.EventLog[] = [];
-
-    const totalChunks = Math.ceil((currentBlock - fromBlock) / CHUNK_SIZE);
-    let chunkIdx = 0;
     let consecutiveFailures = 0;
 
-    for (let from = fromBlock; from <= currentBlock; from += CHUNK_SIZE) {
-      const to = Math.min(from + CHUNK_SIZE - 1, currentBlock);
-      chunkIdx++;
+    console.log(`[IdentitySync] Starting chunked scan (~${Math.ceil((currentBlock - fromBlock) / chunkSize)} initial chunks)...`);
+
+    for (let from = fromBlock; from <= currentBlock; ) {
+      const to = Math.min(from + chunkSize - 1, currentBlock);
       let success = false;
 
       for (let rpcAttempt = 0; rpcAttempt < this.rpcUrls.length && !success; rpcAttempt++) {
-        let retries = 2;
-        while (retries > 0 && !success) {
-          try {
-            const events = await this.identity.queryFilter(registeredFilter, from, to);
-            for (const e of events) {
-              if (e instanceof ethers.EventLog) {
-                allEvents.push(e);
-              }
+        try {
+          const events = await this.identity.queryFilter(registeredFilter, from, to);
+          for (const e of events) {
+            if (e instanceof ethers.EventLog) {
+              allEvents.push(e);
             }
-            success = true;
-            consecutiveFailures = 0;
-          } catch {
-            retries--;
-            if (retries > 0) await sleep(DELAY_MS * 2);
           }
-        }
-
-        if (!success && rpcAttempt < this.rpcUrls.length - 1) {
-          const nextUrl = this.rpcUrls[rpcAttempt + 1];
-          console.warn(`[IdentitySync] Switching RPC → ${nextUrl.replace(/https?:\/\//, "").split("/")[0]}`);
-          this.setProvider(new ethers.JsonRpcProvider(nextUrl));
+          success = true;
+          consecutiveFailures = 0;
+          from += chunkSize;
+        } catch (err: any) {
+          const msg = err.message || "";
+          // Adaptive: reduce chunk on block-range errors (free RPCs may limit to 10 blocks)
+          if (chunkSize > 10 && (msg.includes("block range") || msg.includes("-32600") || msg.includes("10 block"))) {
+            chunkSize = Math.max(10, Math.floor(chunkSize / 4));
+            console.warn(`[IdentitySync] RPC range limit — reducing chunk to ${chunkSize} blocks`);
+            break; // retry same `from` with smaller chunk
+          }
+          if (rpcAttempt < this.rpcUrls.length - 1) {
+            const nextUrl = this.rpcUrls[rpcAttempt + 1];
+            console.warn(`[IdentitySync] Switching RPC → ${nextUrl.replace(/https?:\/\//, "").split("/")[0]}`);
+            this.setProvider(new ethers.JsonRpcProvider(nextUrl));
+          }
         }
       }
 
       if (!success) {
         consecutiveFailures++;
-        console.warn(`[IdentitySync] Chunk ${chunkIdx}/${totalChunks} failed on ALL RPCs, skipping range ${from}–${to}`);
         if (consecutiveFailures >= 5) {
-          console.error(`[IdentitySync] ${consecutiveFailures} consecutive chunk failures — aborting scan.`);
+          console.error(`[IdentitySync] ${consecutiveFailures} consecutive failures — aborting scan.`);
           break;
         }
+        from += chunkSize; // skip on non-range errors
       }
 
-      if (chunkIdx % 10 === 0 || chunkIdx === totalChunks) {
-        console.log(`[IdentitySync] Progress: ${chunkIdx}/${totalChunks} chunks, ${allEvents.length} Registered events found`);
-      }
-
-      if (chunkIdx < totalChunks) await sleep(DELAY_MS);
+      if (from <= currentBlock) await sleep(DELAY_MS);
     }
 
     console.log(`[IdentitySync] Scan complete — found ${allEvents.length} Registered events.`);
