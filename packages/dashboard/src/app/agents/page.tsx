@@ -25,7 +25,7 @@ export default function AgentsPage() {
   const loadAgents = async (cap?: string) => {
     setLoading(true);
     try {
-      const data = await discoverAgents(cap, 100);
+      const data = await discoverAgents(cap);
       setAgents(data.agents || []);
     } catch {
       setAgents([]);
@@ -95,9 +95,9 @@ export default function AgentsPage() {
   const seedCount = agents.filter((a) => a.source !== "chain").length;
 
   return (
-    <div className="space-y-10 pt-16">
+    <div className="space-y-8 pt-14 sm:space-y-10 sm:pt-16">
       {/* Header */}
-      <header className="flex items-start justify-between">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="section-label">Discover Agents</div>
           <p className="mt-2 text-[13px] text-[var(--mid)] leading-[1.7] max-w-[580px]">
@@ -107,7 +107,7 @@ export default function AgentsPage() {
         <button
           onClick={handleSync}
           disabled={syncing}
-          className="btn btn-ghost text-xs whitespace-nowrap"
+          className="btn btn-ghost text-xs whitespace-nowrap shrink-0"
         >
           {syncing ? "Syncing..." : "Sync from Sepolia"}
         </button>
@@ -121,28 +121,28 @@ export default function AgentsPage() {
       )}
 
       {/* Search */}
-      <form onSubmit={handleSearch} className="flex gap-3">
+      <form onSubmit={handleSearch} className="flex flex-col gap-3 sm:flex-row">
         <input
           type="text"
           value={capability}
           onChange={(e) => setCapability(e.target.value)}
-          placeholder="Filter by capability (e.g. market-analysis, code-review)"
+          placeholder="Filter by capability (e.g. market-analysis)"
           className="input flex-1"
         />
         <button
           type="submit"
           disabled={loading || !capability.trim()}
-          className="btn btn-primary"
+          className="btn btn-primary shrink-0"
         >
           {loading ? "Searching\u2026" : "Search"}
         </button>
       </form>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin sm:flex-wrap sm:overflow-visible sm:pb-0">
         <button
           onClick={handleShowAll}
-          className={`tag cursor-pointer transition-colors ${
+          className={`tag cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
             activeFilter === null
               ? "border-[var(--green)] text-[var(--green)]"
               : "border-[var(--dim)] text-[var(--mid)] hover:border-[var(--green)] hover:text-[var(--green)]"
@@ -154,7 +154,7 @@ export default function AgentsPage() {
           <button
             key={cap}
             onClick={() => handleFilter(cap)}
-            className={`tag cursor-pointer transition-colors ${
+            className={`tag cursor-pointer transition-colors whitespace-nowrap shrink-0 ${
               activeFilter === cap
                 ? "border-[var(--green)] text-[var(--green)]"
                 : "border-[var(--dim)] text-[var(--mid)] hover:border-[var(--green)] hover:text-[var(--green)]"

@@ -21,10 +21,11 @@ export async function listAgents() {
   return fetchApi("/api/v1/agents");
 }
 
-export async function discoverAgents(capability?: string, limit = 50) {
-  const params = new URLSearchParams({ limit: String(limit) });
+export async function discoverAgents(capability?: string) {
+  const params = new URLSearchParams();
   if (capability) params.set("capability", capability);
-  return fetchApi(`/api/v1/services/discover?${params}`);
+  const qs = params.toString();
+  return fetchApi(`/api/v1/services/discover${qs ? `?${qs}` : ""}`);
 }
 
 export async function getAgent(agentId: string) {

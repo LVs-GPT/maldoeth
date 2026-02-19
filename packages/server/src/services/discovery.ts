@@ -72,7 +72,7 @@ export class DiscoveryService {
   ) {}
 
   async discover(params: DiscoverParams) {
-    const limit = Math.min(params.limit ?? 50, 100);
+    const limit = params.limit ?? 500;
 
     // Query agents from DB
     let rows: AgentRow[];

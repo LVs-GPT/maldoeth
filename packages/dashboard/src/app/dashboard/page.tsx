@@ -56,7 +56,7 @@ export default function DashboardPage() {
   const disputedDeals = deals.filter((d: any) => d.status === "Disputed").length;
 
   return (
-    <div className="space-y-12 pt-16">
+    <div className="space-y-8 pt-14 sm:space-y-12 sm:pt-16">
       {/* Header */}
       <header>
         <div className="section-label">Dashboard</div>

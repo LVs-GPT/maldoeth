@@ -61,12 +61,12 @@ export default function DisputesPage() {
   const disputeCount = deals.length;
 
   return (
-    <div className="space-y-10 pt-16">
+    <div className="space-y-8 pt-14 sm:space-y-10 sm:pt-16">
       {/* Header */}
       <header>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="section-label" style={{ color: "var(--red)" }}>Dispute Resolution</div>
-          <span className="tag border-[rgba(255,68,68,0.3)] text-[var(--red)] text-[10px]">
+          <span className="tag border-[rgba(255,68,68,0.3)] text-[var(--red)] text-[10px] shrink-0">
             JUROR PANEL
           </span>
         </div>
@@ -119,13 +119,16 @@ export default function DisputesPage() {
               className="border border-[var(--border)] bg-[var(--bg)] overflow-hidden"
             >
               {/* Deal header */}
-              <div className="border-b border-[var(--border)] px-6 py-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
+              <div className="border-b border-[var(--border)] px-4 py-3 sm:px-6 sm:py-4 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
                   <span className="tag border-[rgba(255,68,68,0.3)] text-[var(--red)]">
                     DISPUTED
                   </span>
-                  <span className="text-xs tabular-nums text-[var(--mid)]">
+                  <span className="text-xs tabular-nums text-[var(--mid)] hidden sm:inline">
                     {deal.nonce.slice(0, 18)}&hellip;
+                  </span>
+                  <span className="text-xs tabular-nums text-[var(--mid)] sm:hidden">
+                    {deal.nonce.slice(0, 10)}&hellip;
                   </span>
                 </div>
                 <span className="text-sm font-bold tabular-nums text-[var(--foreground)]">
@@ -134,7 +137,7 @@ export default function DisputesPage() {
               </div>
 
               {/* Deal details */}
-              <div className="px-6 py-5 grid grid-cols-2 gap-6 sm:grid-cols-4">
+              <div className="px-4 py-4 sm:px-6 sm:py-5 grid grid-cols-2 gap-4 sm:gap-6 sm:grid-cols-4">
                 <div>
                   <p className="text-[10px] text-[var(--dim)] tracking-[0.1em] mb-1">CLIENT (BUYER)</p>
                   <p className="text-xs tabular-nums text-[var(--mid)]">
@@ -162,7 +165,7 @@ export default function DisputesPage() {
               </div>
 
               {/* Ruling actions */}
-              <div className="border-t border-[var(--border)] px-6 py-4">
+              <div className="border-t border-[var(--border)] px-4 py-3 sm:px-6 sm:py-4">
                 {resolved[deal.nonce] ? (
                   <div className="flex items-center gap-2 animate-fade-in">
                     <span className="status-dot bg-[var(--green)]" />
@@ -171,23 +174,25 @@ export default function DisputesPage() {
                     </span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-[11px] text-[var(--dim)] mr-2">Issue ruling:</span>
-                    {RULING_OPTIONS.map((opt) => (
-                      <button
-                        key={opt.value}
-                        onClick={() => handleResolve(deal, opt.value)}
-                        disabled={resolving === deal.nonce}
-                        className="btn py-1.5 px-4 text-xs border transition-colors"
-                        style={{
-                          borderColor: `color-mix(in srgb, ${opt.color} 40%, transparent)`,
-                          color: opt.color,
-                        }}
-                      >
-                        {resolving === deal.nonce ? "\u2026" : opt.label}
-                        <span className="ml-1.5 text-[var(--dim)]">&mdash; {opt.description}</span>
-                      </button>
-                    ))}
+                  <div className="space-y-2">
+                    <span className="text-[11px] text-[var(--dim)]">Issue ruling:</span>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                      {RULING_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => handleResolve(deal, opt.value)}
+                          disabled={resolving === deal.nonce}
+                          className="btn py-1.5 px-4 text-xs border transition-colors w-full sm:w-auto"
+                          style={{
+                            borderColor: `color-mix(in srgb, ${opt.color} 40%, transparent)`,
+                            color: opt.color,
+                          }}
+                        >
+                          {resolving === deal.nonce ? "\u2026" : opt.label}
+                          <span className="ml-1.5 text-[var(--dim)]">&mdash; {opt.description}</span>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>
