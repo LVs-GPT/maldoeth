@@ -48,6 +48,8 @@ export class IdentitySync {
   private reputation!: ethers.Contract;
   private startBlock: number;
   private rpcUrls: string[];
+  private repFailures = 0;
+  private readonly REP_CIRCUIT_BREAKER = 3; // skip reputation after N consecutive failures
 
   constructor(
     private db: Database.Database,
@@ -98,6 +100,9 @@ export class IdentitySync {
     const PAGE_SIZE = 100;
     let skip = 0;
     let synced = 0;
+    let skipped = 0; // already in DB
+    let metadataFailed = 0;
+    let dbFailed = 0;
     let totalFetched = 0;
 
     while (true) {
@@ -129,7 +134,7 @@ export class IdentitySync {
         const existing = this.db
           .prepare("SELECT agent_id FROM agents WHERE agent_id = ?")
           .get(raw.agentId);
-        if (existing) continue;
+        if (existing) { skipped++; continue; }
 
         let agent: Awaited<ReturnType<typeof this.fetchAgentData>> = null;
         try {
@@ -137,6 +142,8 @@ export class IdentitySync {
         } catch (err: any) {
           console.warn(`[IdentitySync] Metadata failed for #${raw.agentId}: ${err.message}`);
         }
+
+        if (!agent) metadataFailed++;
 
         // Always store the agent — use fallback data if metadata resolution failed
         try {
@@ -152,11 +159,12 @@ export class IdentitySync {
           });
           synced++;
         } catch (dbErr: any) {
+          dbFailed++;
           console.warn(`[IdentitySync] DB insert failed for #${raw.agentId}: ${dbErr.message}`);
         }
 
-        if (synced > 0 && synced % 100 === 0) {
-          console.log(`[IdentitySync] Progress: ${synced} new agents synced (${totalFetched} scanned)...`);
+        if (synced > 0 && synced % 50 === 0) {
+          console.log(`[IdentitySync] Progress: ${synced} new agents synced (${totalFetched} scanned, ${metadataFailed} no-metadata, ${dbFailed} db-errors)...`);
         }
 
         // Only throttle HTTP fetches (IPFS/HTTP URIs) — data: URIs are local
@@ -169,7 +177,7 @@ export class IdentitySync {
       skip += PAGE_SIZE;
     }
 
-    console.log(`[IdentitySync] Subgraph sync done — ${synced} new agents (${totalFetched} total on-chain).`);
+    console.log(`[IdentitySync] Subgraph sync done — ${synced} new agents stored, ${skipped} already in DB, ${metadataFailed} no-metadata (stored as fallback), ${dbFailed} db-errors, ${totalFetched} total on-chain.`);
     return synced;
   }
 
@@ -331,20 +339,28 @@ export class IdentitySync {
 
     const name = metadata.name || metadata.agentName || metadata.title || `Agent #${agentId}`;
 
-    // On-chain reputation — best-effort, don't block sync if RPC is slow
+    // On-chain reputation — skip entirely if RPC is consistently failing
     let repScore = 0;
     let repCount = 0;
-    try {
-      const summary = await Promise.race([
-        this.reputation.getSummary(agentId),
-        sleep(3000).then(() => null), // 3s timeout
-      ]);
-      if (summary) {
-        repScore = Number(summary.averageValue);
-        repCount = Number(summary.feedbackCount);
+    if (this.repFailures < this.REP_CIRCUIT_BREAKER) {
+      try {
+        const summary = await Promise.race([
+          this.reputation.getSummary(agentId),
+          sleep(1500).then(() => null), // 1.5s timeout (was 3s)
+        ]);
+        if (summary) {
+          repScore = Number(summary.averageValue);
+          repCount = Number(summary.feedbackCount);
+          this.repFailures = 0;
+        } else {
+          this.repFailures++;
+        }
+      } catch {
+        this.repFailures++;
+        if (this.repFailures >= this.REP_CIRCUIT_BREAKER) {
+          console.warn(`[IdentitySync] Reputation RPC failed ${this.repFailures}x — disabling for rest of sync`);
+        }
       }
-    } catch {
-      // No reputation data yet
     }
 
     const capabilities =
@@ -382,9 +398,29 @@ export class IdentitySync {
 
   private async resolveMetadata(uri: string): Promise<any> {
     try {
-      if (uri.startsWith("data:application/json;base64,")) {
-        const base64 = uri.replace("data:application/json;base64,", "");
-        return JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
+      // Handle data: URIs — many on-chain agents use these
+      if (uri.startsWith("data:application/json")) {
+        // Strip the data URI prefix (handles base64, enc=gzip, and other variants)
+        const commaIdx = uri.indexOf(",");
+        if (commaIdx === -1) return null;
+        const payload = uri.slice(commaIdx + 1);
+        const header = uri.slice(0, commaIdx).toLowerCase();
+
+        // Try base64 decode first (legitimate base64)
+        if (header.includes("base64")) {
+          try {
+            const decoded = Buffer.from(payload, "base64").toString("utf-8");
+            return JSON.parse(decoded);
+          } catch {
+            // Many agents mislabel raw JSON as base64 — try parsing directly
+            try { return JSON.parse(payload); } catch { return null; }
+          }
+        }
+
+        // Plain data URI — parse directly
+        try { return JSON.parse(decodeURIComponent(payload)); } catch {
+          try { return JSON.parse(payload); } catch { return null; }
+        }
       }
 
       if (uri.startsWith("ipfs://")) {
