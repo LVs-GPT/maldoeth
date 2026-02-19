@@ -122,7 +122,7 @@ export function TestGuide() {
           <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
           <circle cx="12" cy="17" r="1" fill="currentColor" stroke="none" />
         </svg>
-        <span className="hidden sm:inline">How to?</span>
+        <span className="hidden sm:inline">how to</span>
       </button>
 
       {/* Modal */}
