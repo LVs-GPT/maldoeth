@@ -48,7 +48,12 @@ app.listen(config.port, () => {
   const hasRpc = config.sepoliaRpcUrl && config.sepoliaRpcUrl !== "https://sepolia.infura.io/v3/demo";
 
   // Manual re-sync endpoint (always available)
+  // Runs sync in background — responds immediately so the HTTP request doesn't timeout.
+  // Lock auto-expires after 5 minutes to prevent permanent "already in progress".
   let syncing = false;
+  let syncStartedAt = 0;
+  const SYNC_LOCK_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+
   app.post("/api/v1/agents/sync", async (_req, res) => {
     if (!hasRpc) {
       res.status(503).json({
@@ -57,29 +62,61 @@ app.listen(config.port, () => {
       });
       return;
     }
+
+    // Auto-expire stale lock
+    if (syncing && Date.now() - syncStartedAt > SYNC_LOCK_TIMEOUT_MS) {
+      console.warn("[IdentitySync] Lock expired after timeout, resetting.");
+      syncing = false;
+    }
+
     if (syncing) {
-      res.json({ status: "already_running", message: "Sync is already in progress" });
+      const elapsed = Math.round((Date.now() - syncStartedAt) / 1000);
+      res.json({ status: "already_running", message: `Sync in progress (${elapsed}s elapsed)` });
       return;
     }
+
     syncing = true;
-    try {
-      const identitySyncInstance = new IdentitySync(db);
-      const count = await identitySyncInstance.sync();
-      res.json({ status: "ok", synced: count });
-    } catch (err: any) {
-      res.status(500).json({ status: "error", error: err.message });
-    } finally {
-      syncing = false;
+    syncStartedAt = Date.now();
+
+    // Respond immediately — sync runs in background
+    res.json({ status: "started", message: "Sync started — agents will appear as they are found. Refresh in ~30s." });
+
+    // Fire-and-forget
+    const identitySyncInstance = new IdentitySync(db);
+    identitySyncInstance.sync()
+      .then((count) => {
+        console.log(`[IdentitySync] Manual sync complete: ${count} new agents.`);
+      })
+      .catch((err) => {
+        console.error("[IdentitySync] Manual sync failed:", err.message);
+      })
+      .finally(() => {
+        syncing = false;
+      });
+  });
+
+  // GET endpoint to check sync status
+  app.get("/api/v1/agents/sync/status", (_req, res) => {
+    if (syncing) {
+      const elapsed = Math.round((Date.now() - syncStartedAt) / 1000);
+      res.json({ syncing: true, elapsed });
+    } else {
+      res.json({ syncing: false });
     }
   });
 
   if (hasRpc) {
     // Sync ERC-8004 agents from chain into local DB on startup
+    syncing = true;
+    syncStartedAt = Date.now();
     const identitySync = new IdentitySync(db);
-    identitySync.sync().catch((err) => {
-      console.error("[IdentitySync] Failed:", err.message);
-      console.log("[IdentitySync] Server continues with local agents only.");
-    });
+    identitySync.sync()
+      .then((count) => console.log(`[IdentitySync] Startup sync complete: ${count} new agents.`))
+      .catch((err) => {
+        console.error("[IdentitySync] Failed:", err.message);
+        console.log("[IdentitySync] Server continues with local agents only.");
+      })
+      .finally(() => { syncing = false; });
 
     // Start escrow event listener
     const listener = new EscrowEventListener(db);

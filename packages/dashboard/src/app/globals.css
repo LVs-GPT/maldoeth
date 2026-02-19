@@ -303,7 +303,7 @@
     text-transform: uppercase;
     color: var(--mid);
     padding: 10px 12px;
-    text-align: left;
+    text-align: center;
     border-bottom: 1px solid var(--border);
     background: var(--surface);
   }
@@ -312,6 +312,7 @@
     padding: 10px 12px;
     border-bottom: 1px solid var(--border-subtle);
     vertical-align: middle;
+    text-align: center;
   }
 
   .data-table tbody tr {
