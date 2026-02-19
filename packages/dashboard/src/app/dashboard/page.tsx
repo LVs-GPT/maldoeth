@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useAccount } from "wagmi";
+import { useWallet } from "@/hooks/useWallet";
 import { PendingApprovalCard } from "@/components/PendingApprovalCard";
 import { DealStatusTable } from "@/components/DealStatusTable";
 import { getPendingApprovals, listDeals } from "@/lib/api";
 
 export default function DashboardPage() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useWallet();
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [deals, setDeals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,9 +41,9 @@ export default function DashboardPage() {
           </svg>
         </div>
         <div className="text-center">
-          <h2 className="text-base font-bold text-[var(--foreground)]">Connect your wallet</h2>
+          <h2 className="text-base font-bold text-[var(--foreground)]">Sign in to continue</h2>
           <p className="mt-2 text-xs text-[var(--mid)]">
-            Connect a Sepolia wallet to view your deals and manage agent criteria.
+            Sign in with Google, email, or a wallet to view your deals and manage agent criteria.
           </p>
         </div>
       </div>

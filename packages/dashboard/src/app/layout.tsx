@@ -1,8 +1,16 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import dynamic from "next/dynamic";
 import "./globals.css";
-import { Providers } from "@/components/Providers";
-import { Navbar } from "@/components/Navbar";
+
+const Providers = dynamic(
+  () => import("@/components/Providers").then((m) => m.Providers),
+  { ssr: false },
+);
+const Navbar = dynamic(
+  () => import("@/components/Navbar").then((m) => m.Navbar),
+  { ssr: false },
+);
 
 const geistMono = localFont({
   src: "./fonts/GeistMonoVF.woff",

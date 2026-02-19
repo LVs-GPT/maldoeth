@@ -22,9 +22,16 @@ const nextConfig = {
       }),
     );
 
+    // Privy sub-dependencies reference React globally — provide it
+    config.plugins.push(
+      new webpack.ProvidePlugin({
+        React: "react",
+      }),
+    );
+
     return config;
   },
-  transpilePackages: ["@rainbow-me/rainbowkit"],
+  transpilePackages: ["@privy-io/react-auth", "@privy-io/js-sdk-core"],
 };
 
 export default nextConfig;

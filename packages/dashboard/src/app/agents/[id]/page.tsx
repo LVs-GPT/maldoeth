@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useAccount } from "wagmi";
+import { useWallet } from "@/hooks/useWallet";
 import { getAgent, getAgentReputation, getAgentRatings, getAgentVouches } from "@/lib/api";
 import { HireAgentModal } from "@/components/HireAgentModal";
 
@@ -11,7 +11,7 @@ export default function AgentProfilePage() {
   const params = useParams();
   const router = useRouter();
   const agentId = params.id as string;
-  const { address, isConnected } = useAccount();
+  const { address, isConnected } = useWallet();
 
   const [agent, setAgent] = useState<any>(null);
   const [reputation, setReputation] = useState<any>(null);
