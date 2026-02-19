@@ -46,7 +46,7 @@ export function createServicesRouter(
         minReputation: minRep,
       });
 
-      res.json({ agents });
+      res.json({ agents, count: agents.length });
     } catch (err) {
       next(err);
     }

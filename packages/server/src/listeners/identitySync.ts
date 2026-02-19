@@ -139,19 +139,23 @@ export class IdentitySync {
         }
 
         // Always store the agent — use fallback data if metadata resolution failed
-        this.upsertAgent(agent ?? {
-          agentId: raw.agentId,
-          name: `Agent #${raw.agentId}`,
-          description: "",
-          capabilities: [],
-          basePrice: 0,
-          endpoint: "",
-          wallet: (raw.owner || "").toLowerCase(),
-          ipfsUri: raw.agentURI || "",
-        });
-        synced++;
+        try {
+          this.upsertAgent(agent ?? {
+            agentId: raw.agentId,
+            name: `Agent #${raw.agentId}`,
+            description: "",
+            capabilities: [],
+            basePrice: 0,
+            endpoint: "",
+            wallet: (raw.owner || "").toLowerCase(),
+            ipfsUri: raw.agentURI || "",
+          });
+          synced++;
+        } catch (dbErr: any) {
+          console.warn(`[IdentitySync] DB insert failed for #${raw.agentId}: ${dbErr.message}`);
+        }
 
-        if (synced % 100 === 0) {
+        if (synced > 0 && synced % 100 === 0) {
           console.log(`[IdentitySync] Progress: ${synced} new agents synced (${totalFetched} scanned)...`);
         }
 
@@ -261,17 +265,21 @@ export class IdentitySync {
       }
 
       // Always store — use fallback data if metadata resolution failed
-      this.upsertAgent(agent ?? {
-        agentId,
-        name: `Agent #${agentId}`,
-        description: "",
-        capabilities: [],
-        basePrice: 0,
-        endpoint: "",
-        wallet: (owner || "").toLowerCase(),
-        ipfsUri: agentURI || "",
-      });
-      synced++;
+      try {
+        this.upsertAgent(agent ?? {
+          agentId,
+          name: `Agent #${agentId}`,
+          description: "",
+          capabilities: [],
+          basePrice: 0,
+          endpoint: "",
+          wallet: (owner || "").toLowerCase(),
+          ipfsUri: agentURI || "",
+        });
+        synced++;
+      } catch (dbErr: any) {
+        console.warn(`[IdentitySync] DB insert failed for #${agentId}: ${dbErr.message}`);
+      }
 
       const needsHttp = agentURI && !agentURI.startsWith("data:");
       if (needsHttp) await sleep(100);

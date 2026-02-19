@@ -91,57 +91,68 @@ export class DiscoveryService {
         .all() as AgentRow[];
     }
 
-    // Enrich with reputation data
-    const agents = await Promise.all(
-      rows.map(async (row) => {
-        let rep: ReputationData = {
-          score: 0,
-          reviewCount: 0,
-          disputeRate: 0,
-          badges: [],
-        };
+    console.log(`[Discover] ${rows.length} agents in DB`);
 
-        if (this.reputation) {
-          try {
-            rep = await this.reputation.getReputation(row.agent_id);
-          } catch {
-            // Fallback to zero reputation
+    // Enrich with reputation data — batch to avoid N concurrent RPC calls.
+    // For large agent counts, only look up reputation for agents with local ratings
+    // (chain reputation checked individually is too slow with public RPCs).
+    const BATCH_SIZE = 20;
+    const agents: any[] = [];
+
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      const batch = rows.slice(i, i + BATCH_SIZE);
+      const enriched = await Promise.all(
+        batch.map(async (row) => {
+          let rep: ReputationData = {
+            score: 0,
+            reviewCount: 0,
+            disputeRate: 0,
+            badges: [],
+          };
+
+          if (this.reputation) {
+            try {
+              rep = await this.reputation.getReputation(row.agent_id);
+            } catch {
+              // Fallback to zero reputation
+            }
           }
-        }
 
-        const rank = rankScore(rep);
-        const badges = computeBadges(rep);
+          const rank = rankScore(rep);
+          const badges = computeBadges(rep);
 
-        return {
-          agentId: row.agent_id,
-          name: row.name,
-          description: row.description,
-          capabilities: JSON.parse(row.capabilities),
-          basePrice: row.base_price,
-          endpoint: row.endpoint,
-          source: row.source || "seed",
-          reputation: {
-            score: rep.score,
-            reviewCount: rep.reviewCount,
-            disputeRate: rep.disputeRate,
-            badges,
-            bayesianScore: bayesianScore(rep.score, rep.reviewCount),
-          },
-          rankScore: rank,
-        };
-      }),
-    );
+          return {
+            agentId: row.agent_id,
+            name: row.name,
+            description: row.description,
+            capabilities: JSON.parse(row.capabilities),
+            basePrice: row.base_price,
+            endpoint: row.endpoint,
+            source: row.source || "seed",
+            reputation: {
+              score: rep.score,
+              reviewCount: rep.reviewCount,
+              disputeRate: rep.disputeRate,
+              badges,
+              bayesianScore: bayesianScore(rep.score, rep.reviewCount),
+            },
+            rankScore: rank,
+          };
+        }),
+      );
+      agents.push(...enriched);
+    }
 
     // Filter by min reputation if specified
     let filtered = agents;
     if (params.minReputation !== undefined) {
       filtered = agents.filter(
-        (a) => a.reputation.bayesianScore >= params.minReputation!,
+        (a: any) => a.reputation.bayesianScore >= params.minReputation!,
       );
     }
 
     // Sort by rank score descending (established agents first)
-    filtered.sort((a, b) => b.rankScore - a.rankScore);
+    filtered.sort((a: any, b: any) => b.rankScore - a.rankScore);
 
     return limit ? filtered.slice(0, limit) : filtered;
   }
