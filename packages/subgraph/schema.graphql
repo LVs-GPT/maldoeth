@@ -1,0 +1,49 @@
+"""
+ERC-8004 Agent identity registered on-chain.
+Primary entity — one per minted agent NFT.
+"""
+type Agent @entity {
+  "Token ID from the Identity Registry"
+  id: ID!
+  "On-chain agent ID (uint256 as string)"
+  agentId: BigInt!
+  "Current owner wallet"
+  owner: Bytes!
+  "Metadata URI (IPFS / data: / https:)"
+  agentURI: String!
+  "Block number of registration"
+  blockNumber: BigInt!
+  "Timestamp of registration"
+  registeredAt: BigInt!
+  "Transaction hash of registration"
+  txHash: Bytes!
+  "Has the URI been updated after registration"
+  uriUpdated: Boolean!
+}
+
+"""
+Tracks every URI update (setAgentURI) for audit trail.
+"""
+type URIUpdate @entity(immutable: true) {
+  id: ID!
+  agent: Agent!
+  oldURI: String!
+  newURI: String!
+  updatedBy: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}
+
+"""
+Tracks ownership transfers of agent NFTs.
+"""
+type OwnershipTransfer @entity(immutable: true) {
+  id: ID!
+  agent: Agent!
+  from: Bytes!
+  to: Bytes!
+  blockNumber: BigInt!
+  timestamp: BigInt!
+  txHash: Bytes!
+}

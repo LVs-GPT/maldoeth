@@ -36,6 +36,9 @@ export const config = {
   // x402
   get x402FacilitatorUrl() { return process.env.X402_FACILITATOR_URL || "https://www.x402.org/facilitator"; },
 
+  // Subgraph URL (The Graph — Subgraph Studio on Sepolia)
+  get subgraphUrl() { return process.env.SUBGRAPH_URL || ""; },
+
   // CORS — restrict in production, allow all in dev
   get corsOrigin() { return process.env.CORS_ORIGIN || "*"; },
 

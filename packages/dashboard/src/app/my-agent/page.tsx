@@ -7,7 +7,6 @@ import {
   registerAgent,
   getCriteria,
   setCriteria,
-  listDeals,
 } from "@/lib/api";
 import { Spinner } from "@/components/Spinner";
 import { useToast } from "@/components/Toast";
@@ -62,7 +61,7 @@ const CAPABILITY_OPTIONS = [
 
 export default function MyAgentPage() {
   const { address, isConnected } = useWallet();
-  const [tab, setTab] = useState<"profile" | "criteria" | "deals">("profile");
+  const [tab, setTab] = useState<"profile" | "criteria">("profile");
   const [myAgents, setMyAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -126,7 +125,7 @@ export default function MyAgentPage() {
         <>
           {/* Tabs */}
           <div className="flex gap-0 border-b border-[var(--border)]">
-            {(["profile", "criteria", "deals"] as const).map((t) => (
+            {(["profile", "criteria"] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -136,14 +135,13 @@ export default function MyAgentPage() {
                     : "border-transparent text-[var(--mid)] hover:text-[var(--foreground)]"
                 }`}
               >
-                {t === "deals" ? "Incoming Deals" : t}
+                {t}
               </button>
             ))}
           </div>
 
           {tab === "profile" && <AgentProfile agent={myAgents[0]} />}
           {tab === "criteria" && <CriteriaTab address={address!} />}
-          {tab === "deals" && <IncomingDealsTab agentWallet={address!} />}
         </>
       ) : (
         <RegisterForm wallet={address!} onRegistered={loadMyAgents} />
@@ -565,83 +563,3 @@ function CriteriaTab({ address }: { address: string }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════
-// INCOMING DEALS TAB
-// ═══════════════════════════════════════════════════════════════════════
-
-function IncomingDealsTab({ agentWallet }: { agentWallet: string }) {
-  const [deals, setDeals] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    listDeals()
-      .then((data) => {
-        // Filter deals where this wallet is the server/agent side
-        const incoming = (data.deals || []).filter(
-          (d: any) => d.serverAddress?.toLowerCase() === agentWallet.toLowerCase(),
-        );
-        setDeals(incoming);
-      })
-      .catch(() => setDeals([]))
-      .finally(() => setLoading(false));
-  }, [agentWallet]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center gap-3 py-8 text-[var(--mid)]">
-        <span className="cursor-blink" />
-        <span className="text-xs">Loading&hellip;</span>
-      </div>
-    );
-  }
-
-  if (deals.length === 0) {
-    return (
-      <div className="bg-[var(--surface)] border border-[var(--border)] p-10 text-center">
-        <p className="text-sm text-[var(--mid)]">No incoming deals yet.</p>
-        <p className="text-xs text-[var(--dim)] mt-2">
-          When someone hires your agent, deals will appear here.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-3">
-      <p className="text-[11px] text-[var(--mid)]">{deals.length} deal{deals.length !== 1 ? "s" : ""}</p>
-      <div className="border border-[var(--border)] overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="border-b border-[var(--border)] bg-[var(--surface)]">
-              <th className="p-3 text-left text-[10px] text-[var(--dim)] tracking-[0.05em] uppercase">Nonce</th>
-              <th className="p-3 text-left text-[10px] text-[var(--dim)] tracking-[0.05em] uppercase">Client</th>
-              <th className="p-3 text-right text-[10px] text-[var(--dim)] tracking-[0.05em] uppercase">Amount</th>
-              <th className="p-3 text-center text-[10px] text-[var(--dim)] tracking-[0.05em] uppercase">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {deals.map((deal: any) => (
-              <tr key={deal.nonce} className="border-b border-[var(--border)] last:border-b-0">
-                <td className="p-3 text-[var(--mid)] font-mono">{deal.nonce?.slice(0, 10)}...</td>
-                <td className="p-3 text-[var(--mid)]">{deal.clientAddress?.slice(0, 8)}...</td>
-                <td className="p-3 text-right tabular-nums text-[var(--foreground)]">
-                  ${deal.amount ? (deal.amount / 1e6).toFixed(2) : "—"}
-                </td>
-                <td className="p-3 text-center">
-                  <span className={`tag text-[10px] ${
-                    deal.status === "Funded" ? "border-[var(--green-dim)] text-[var(--green)]" :
-                    deal.status === "Completed" ? "border-[var(--blue)] text-[var(--blue)]" :
-                    deal.status === "Disputed" ? "border-[var(--red)] text-[var(--red)]" :
-                    "border-[var(--dim)] text-[var(--mid)]"
-                  }`}>
-                    {deal.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}

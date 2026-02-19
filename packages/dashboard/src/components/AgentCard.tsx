@@ -85,12 +85,12 @@ export function AgentCard({ agent }: { agent: AgentProps }) {
     >
       {/* Header: name + score */}
       <div className="mb-1 flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-[13px] font-bold text-[var(--foreground)] group-hover:text-[var(--green)] transition-colors">
+        <div className="flex items-center gap-2 min-w-0">
+          <h3 className="text-[13px] font-bold text-[var(--foreground)] group-hover:text-[var(--green)] transition-colors truncate">
             {agent.name}
           </h3>
           {agent.source === "chain" && (
-            <span className="tag border-[rgba(68,136,255,0.3)] text-[var(--blue)] !text-[8px] !py-0 !px-1.5">
+            <span className="tag border-[rgba(68,136,255,0.3)] text-[var(--blue)] !text-[8px] !py-0 !px-1.5 shrink-0 whitespace-nowrap">
               on-chain
             </span>
           )}
@@ -126,7 +126,7 @@ export function AgentCard({ agent }: { agent: AgentProps }) {
         {agent.capabilities.map((cap) => (
           <span
             key={cap}
-            className="tag border-[var(--dim)] text-[var(--mid)]"
+            className="tag border-[var(--border)] text-[var(--mid)] bg-[var(--bg)]"
           >
             {cap}
           </span>
