@@ -48,6 +48,24 @@ export async function syncAgents() {
   return fetchApi("/api/v1/agents/sync", { method: "POST" });
 }
 
+export async function getAgentsByWallet(wallet: string) {
+  return fetchApi(`/api/v1/agents?wallet=${wallet}`);
+}
+
+export async function registerAgent(body: {
+  name: string;
+  description: string;
+  capabilities: string[];
+  basePrice: number;
+  endpoint: string;
+  wallet: string;
+}) {
+  return fetchApi("/api/v1/services/register", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 // ─── Deals ──────────────────────────────────────────────────────────
 
 export async function listDeals() {

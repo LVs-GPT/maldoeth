@@ -1,8 +1,9 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import type { DealService } from "../services/deals.js";
+import type { WebhookService } from "../services/webhook.js";
 import { ApiError } from "../services/registration.js";
 
-export function createDealsRouter(dealService: DealService): Router {
+export function createDealsRouter(dealService: DealService, webhookService?: WebhookService): Router {
   const router = Router();
 
   // POST /api/v1/deals/create — creates deal on-chain (USDC transfer + escrow)
@@ -106,6 +107,102 @@ export function createDealsRouter(dealService: DealService): Router {
     try {
       const result = await dealService.approveOrReject(parseInt(req.params.id, 10), "rejected");
       res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // POST /api/v1/deals/:nonce/deliver — agent submits work result
+  router.post("/:nonce/deliver", (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { result, agentWallet } = req.body;
+      if (!result) throw new ApiError(400, "result is required (the work output)");
+
+      const delivery = dealService.deliverResult(req.params.nonce, result, agentWallet);
+
+      // Notify via webhook
+      webhookService?.emit({
+        type: "deal.delivered",
+        nonce: req.params.nonce,
+        timestamp: new Date().toISOString(),
+        data: { result: result.slice(0, 200) },
+      });
+
+      res.json(delivery);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // GET /api/v1/deals/:nonce/delivery — check delivery status
+  router.get("/:nonce/delivery", (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const delivery = dealService.getDelivery(req.params.nonce);
+      res.json(delivery);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // GET /api/v1/deals/events — SSE stream for real-time deal updates
+  router.get("/events", (req: Request, res: Response) => {
+    if (!webhookService) {
+      res.status(503).json({ error: "Event streaming not available" });
+      return;
+    }
+
+    const wallet = (req.query.wallet as string || "").toLowerCase();
+
+    res.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    });
+    res.write("event: connected\ndata: {\"status\":\"connected\"}\n\n");
+
+    // Keep-alive ping every 30s
+    const keepAlive = setInterval(() => {
+      res.write(": ping\n\n");
+    }, 30_000);
+
+    const unsubscribe = webhookService.subscribe((event) => {
+      // If wallet filter is set, only send events for that wallet's deals
+      if (wallet && event.data) {
+        const client = ((event.data.client as string) || "").toLowerCase();
+        const server = ((event.data.server as string) || "").toLowerCase();
+        if (client !== wallet && server !== wallet) return;
+      }
+      res.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
+    });
+
+    req.on("close", () => {
+      clearInterval(keepAlive);
+      unsubscribe();
+    });
+  });
+
+  // POST /api/v1/deals/webhooks — register a webhook for an agent
+  router.post("/webhooks", (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!webhookService) throw new ApiError(503, "Webhook service not available");
+      const { agentId, endpoint, secret } = req.body;
+      if (!agentId) throw new ApiError(400, "agentId is required");
+      if (!endpoint) throw new ApiError(400, "endpoint URL is required");
+
+      webhookService.registerWebhook(agentId, endpoint, secret);
+      res.json({ agentId, endpoint, status: "registered" });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // DELETE /api/v1/deals/webhooks/:agentId — remove webhook
+  router.delete("/webhooks/:agentId", (req: Request, res: Response, next: NextFunction) => {
+    try {
+      if (!webhookService) throw new ApiError(503, "Webhook service not available");
+      webhookService.removeWebhook(req.params.agentId);
+      res.json({ status: "removed" });
     } catch (err) {
       next(err);
     }

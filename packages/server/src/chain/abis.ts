@@ -8,9 +8,18 @@ export const ERC20_ABI = [
 ] as const;
 
 export const ERC8004_IDENTITY_ABI = [
-  "function mint(address to, string memory uri) external returns (uint256 tokenId)",
+  // Registration (3 overloads in the real contract)
+  "function register() external returns (uint256 agentId)",
+  "function register(string memory agentURI) external returns (uint256 agentId)",
+  // Read
   "function tokenURI(uint256 tokenId) external view returns (string memory)",
   "function ownerOf(uint256 tokenId) external view returns (address)",
+  "function getAgentWallet(uint256 agentId) external view returns (address)",
+  // Update
+  "function setAgentURI(uint256 agentId, string calldata newURI) external",
+  // Events — Registered is the primary indexing event
+  "event Registered(uint256 indexed agentId, string agentURI, address indexed owner)",
+  "event URIUpdated(uint256 indexed agentId, string newURI, address indexed updatedBy)",
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
 ] as const;
 

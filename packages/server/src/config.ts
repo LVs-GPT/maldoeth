@@ -1,10 +1,26 @@
 /**
+ * Public Sepolia RPCs — tried in order when the primary fails.
+ * No API keys required. Ankr & PublicNode handle getLogs best.
+ */
+export const SEPOLIA_RPC_FALLBACKS = [
+  "https://rpc.ankr.com/eth_sepolia",
+  "https://ethereum-sepolia-rpc.publicnode.com",
+  "https://sepolia.drpc.org",
+  "https://rpc2.sepolia.org",
+];
+
+/**
  * Config reads process.env lazily via getters so that dotenv has time
  * to load before values are accessed (ESM hoists static imports).
  */
 export const config = {
   get port() { return parseInt(process.env.PORT || "3000", 10); },
-  get sepoliaRpcUrl() { return process.env.SEPOLIA_RPC_URL || "https://rpc.ankr.com/eth_sepolia"; },
+  get sepoliaRpcUrl() { return process.env.SEPOLIA_RPC_URL || SEPOLIA_RPC_FALLBACKS[0]; },
+  get sepoliaRpcFallbacks(): string[] {
+    const primary = config.sepoliaRpcUrl;
+    // Return all RPCs with primary first, deduped
+    return [primary, ...SEPOLIA_RPC_FALLBACKS.filter((u) => u !== primary)];
+  },
   get privateKey() { return process.env.PRIVATE_KEY || ""; },
 
   // Existing protocol addresses (Sepolia)

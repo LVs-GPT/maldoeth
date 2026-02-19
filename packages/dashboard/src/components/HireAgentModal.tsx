@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { createDeal } from "@/lib/api";
+import { Spinner } from "./Spinner";
+import { useToast } from "./Toast";
 
 interface Props {
   agentId: string;
@@ -17,6 +19,7 @@ export function HireAgentModal({ agentId, agentName, basePrice, clientAddress, o
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<any>(null);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,11 +36,18 @@ export function HireAgentModal({ agentId, agentName, basePrice, clientAddress, o
 
       setResult(res);
 
+      if (res.requiresHumanApproval) {
+        toast("info", "Deal requires approval. Check your Dashboard.");
+      } else {
+        toast("success", "Deal created successfully!", res.txHash);
+      }
+
       if (!res.requiresHumanApproval && res.nonce) {
         setTimeout(() => onSuccess(res.nonce), 1500);
       }
     } catch (err: any) {
       setError(err.message);
+      toast("error", err.message || "Failed to create deal");
     } finally {
       setLoading(false);
     }
@@ -111,7 +121,7 @@ export function HireAgentModal({ agentId, agentName, basePrice, clientAddress, o
                 disabled={loading || !taskDescription.trim()}
                 className="btn btn-primary flex-1"
               >
-                {loading ? "Creating deal\u2026" : "Hire & Pay \u2192"}
+                {loading ? <><Spinner size={14} className="inline mr-1.5" />Creating deal&hellip;</> : "Hire & Pay \u2192"}
               </button>
             </div>
           </form>

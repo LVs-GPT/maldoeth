@@ -124,4 +124,16 @@ function runMigrations(database: Database.Database): void {
   } catch {
     // Column already exists
   }
+
+  // Migration: add delivery columns to deals
+  try {
+    database.exec(`ALTER TABLE deals ADD COLUMN delivery_result TEXT`);
+  } catch {
+    // Column already exists
+  }
+  try {
+    database.exec(`ALTER TABLE deals ADD COLUMN delivered_at TEXT`);
+  } catch {
+    // Column already exists
+  }
 }

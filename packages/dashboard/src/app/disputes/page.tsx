@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { listDeals, resolveDispute } from "@/lib/api";
+import { Spinner } from "@/components/Spinner";
+import { useToast } from "@/components/Toast";
 
 interface Deal {
   nonce: string;
@@ -42,17 +44,20 @@ export default function DisputesPage() {
     loadData();
   }, [loadData]);
 
+  const { toast } = useToast();
+
   const handleResolve = async (deal: Deal, ruling: number) => {
     const label = RULING_OPTIONS.find((o) => o.value === ruling)?.label || "Unknown";
     if (!confirm(`Confirm ruling: "${label}" for deal ${deal.nonce.slice(0, 10)}...?`)) return;
 
     setResolving(deal.nonce);
     try {
-      await resolveDispute(deal.nonce, ruling);
+      const res = await resolveDispute(deal.nonce, ruling);
       setResolved((prev) => ({ ...prev, [deal.nonce]: label }));
+      toast("success", `Dispute resolved: ${label}`, res?.txHash);
       setTimeout(() => loadData(), 1500);
     } catch (err: any) {
-      alert(err.message);
+      toast("error", err.message || "Failed to resolve dispute");
     } finally {
       setResolving(null);
     }
@@ -188,7 +193,7 @@ export default function DisputesPage() {
                             color: opt.color,
                           }}
                         >
-                          {resolving === deal.nonce ? "\u2026" : opt.label}
+                          {resolving === deal.nonce ? <><Spinner size={12} className="inline mr-1" />&hellip;</> : opt.label}
                           <span className="ml-1.5 text-[var(--dim)]">&mdash; {opt.description}</span>
                         </button>
                       ))}

@@ -6,11 +6,17 @@ import { ApiError } from "../services/registration.js";
 export function createAgentsRouter(registration: RegistrationService, ratingService?: RatingService): Router {
   const router = Router();
 
-  // GET /api/v1/agents — list all agents
-  router.get("/", (_req: Request, res: Response, next: NextFunction) => {
+  // GET /api/v1/agents — list all agents (optionally filter by wallet)
+  router.get("/", (req: Request, res: Response, next: NextFunction) => {
     try {
-      const agents = registration.listAgents();
-      res.json({ agents });
+      const wallet = req.query.wallet as string | undefined;
+      if (wallet) {
+        const agents = registration.listAgentsByWallet(wallet.toLowerCase());
+        res.json({ agents });
+      } else {
+        const agents = registration.listAgents();
+        res.json({ agents });
+      }
     } catch (err) {
       next(err);
     }

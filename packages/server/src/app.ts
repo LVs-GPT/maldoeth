@@ -10,6 +10,7 @@ import { CriteriaService } from "./services/criteria.js";
 import { DealService } from "./services/deals.js";
 import { RatingService } from "./services/rating.js";
 import { VouchService } from "./services/vouch.js";
+import { WebhookService } from "./services/webhook.js";
 import { DbReputationAdapter } from "./services/db-reputation-adapter.js";
 import { ChainReputationAdapter } from "./services/chain-reputation-adapter.js";
 import { HybridReputationAdapter } from "./services/hybrid-reputation-adapter.js";
@@ -50,6 +51,7 @@ export function createApp(deps: AppDeps) {
   const dealService = new DealService(deps.db, criteriaService);
   const ratingService = new RatingService(deps.db);
   const vouchService = new VouchService(deps.db);
+  const webhookService = new WebhookService(deps.db);
 
   // Health check
   app.get("/health", (_req: Request, res: Response) => {
@@ -60,7 +62,7 @@ export function createApp(deps: AppDeps) {
   app.use("/api/v1/services", createServicesRouter(registration, discovery));
   app.use("/api/v1/principals", createCriteriaRouter(criteriaService));
   app.use("/api/v1/criteria", createCriteriaRouter(criteriaService));
-  app.use("/api/v1/deals", createDealsRouter(dealService));
+  app.use("/api/v1/deals", createDealsRouter(dealService, webhookService));
   app.use("/api/v1/agents", createAgentsRouter(registration, ratingService));
   app.use("/api/v1/agents", createVouchRouter(vouchService));
   app.use("/x402", createX402Router(deps.db));
@@ -76,5 +78,5 @@ export function createApp(deps: AppDeps) {
     res.status(500).json({ error: err.message || "Internal server error" });
   });
 
-  return { app, registration, discovery, criteriaService, dealService, ratingService, vouchService };
+  return { app, registration, discovery, criteriaService, dealService, ratingService, vouchService, webhookService };
 }

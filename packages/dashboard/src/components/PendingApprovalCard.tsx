@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { approveDeal, rejectDeal } from "@/lib/api";
+import { Spinner } from "./Spinner";
+import { useToast } from "./Toast";
 
 interface PendingApproval {
   id: number;
@@ -21,33 +23,40 @@ export function PendingApprovalCard({
   approval: PendingApproval;
   onAction: () => void;
 }) {
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<"approve" | "reject" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
   const failedChecks: string[] = JSON.parse(approval.failed_checks || "[]");
 
   const handleApprove = async () => {
-    setLoading(true);
+    setLoading("approve");
     setError(null);
     try {
       await approveDeal(approval.id);
+      toast("success", "Deal approved. Escrow funded.");
       onAction();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Approval failed");
+      const msg = err instanceof Error ? err.message : "Approval failed";
+      setError(msg);
+      toast("error", msg);
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   };
 
   const handleReject = async () => {
-    setLoading(true);
+    setLoading("reject");
     setError(null);
     try {
       await rejectDeal(approval.id);
+      toast("info", "Deal rejected.");
       onAction();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Rejection failed");
+      const msg = err instanceof Error ? err.message : "Rejection failed";
+      setError(msg);
+      toast("error", msg);
     } finally {
-      setLoading(false);
+      setLoading(null);
     }
   };
 
@@ -104,11 +113,11 @@ export function PendingApprovalCard({
 
       {/* Actions */}
       <div className="flex gap-2">
-        <button onClick={handleApprove} disabled={loading} className="btn btn-success">
-          Approve
+        <button onClick={handleApprove} disabled={!!loading} className="btn btn-success">
+          {loading === "approve" ? <><Spinner size={12} className="inline mr-1" />Approving&hellip;</> : "Approve"}
         </button>
-        <button onClick={handleReject} disabled={loading} className="btn btn-ghost">
-          Reject
+        <button onClick={handleReject} disabled={!!loading} className="btn btn-ghost">
+          {loading === "reject" ? <><Spinner size={12} className="inline mr-1" />Rejecting&hellip;</> : "Reject"}
         </button>
       </div>
     </div>

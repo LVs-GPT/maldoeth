@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { completeDeal, disputeDeal } from "@/lib/api";
 import { RateAgentModal } from "./RateAgentModal";
+import { Spinner } from "./Spinner";
+import { useToast } from "./Toast";
 
 interface Deal {
   nonce: string;
@@ -32,15 +34,17 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
   const [completing, setCompleting] = useState<string | null>(null);
   const [disputing, setDisputing] = useState<string | null>(null);
   const [ratingDeal, setRatingDeal] = useState<Deal | null>(null);
+  const { toast } = useToast();
 
   const handleComplete = async (deal: Deal) => {
     setCompleting(deal.nonce);
     try {
-      await completeDeal(deal.nonce);
+      const res = await completeDeal(deal.nonce);
+      toast("success", "Deal completed. Funds released.", res?.txHash);
       setRatingDeal(deal);
       onUpdate?.();
     } catch (err: any) {
-      alert(err.message);
+      toast("error", err.message || "Failed to complete deal");
     } finally {
       setCompleting(null);
     }
@@ -50,10 +54,11 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
     if (!confirm("Open a dispute for this deal? This will freeze the USDC and pay an arbitration fee.")) return;
     setDisputing(deal.nonce);
     try {
-      await disputeDeal(deal.nonce);
+      const res = await disputeDeal(deal.nonce);
+      toast("info", "Dispute opened. Funds frozen until ruling.", res?.txHash);
       onUpdate?.();
     } catch (err: any) {
-      alert(err.message);
+      toast("error", err.message || "Failed to open dispute");
     } finally {
       setDisputing(null);
     }
@@ -230,14 +235,14 @@ function DealActions({
             disabled={completing === deal.nonce}
             className="btn btn-success py-1 px-3 text-xs"
           >
-            {completing === deal.nonce ? "\u2026" : "Complete"}
+            {completing === deal.nonce ? <><Spinner size={12} className="inline mr-1" />Completing&hellip;</> : "Complete"}
           </button>
           <button
             onClick={() => onDispute(deal)}
             disabled={disputing === deal.nonce}
             className="btn btn-danger py-1 px-3 text-xs"
           >
-            {disputing === deal.nonce ? "\u2026" : "Dispute"}
+            {disputing === deal.nonce ? <><Spinner size={12} className="inline mr-1" />Disputing&hellip;</> : "Dispute"}
           </button>
         </>
       )}

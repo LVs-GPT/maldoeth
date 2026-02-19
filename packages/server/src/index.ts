@@ -27,7 +27,7 @@ if (isDbEmpty(db)) {
   seedDemoData(db);
 }
 
-const { app } = createApp({ db });
+const { app, webhookService } = createApp({ db });
 
 app.listen(config.port, () => {
   console.log(`\n  Maldo API server running on port ${config.port}`);
@@ -42,6 +42,10 @@ app.listen(config.port, () => {
   console.log(`    GET  /api/v1/deals/:nonce/status     — Deal status`);
   console.log(`    POST /api/v1/agents/:id/rate        — Rate an agent`);
   console.log(`    GET  /api/v1/agents/:id/reputation  — Agent reputation`);
+  console.log(`    POST /api/v1/deals/:nonce/deliver   — Agent delivers work result`);
+  console.log(`    GET  /api/v1/deals/:nonce/delivery  — Check delivery status`);
+  console.log(`    GET  /api/v1/deals/events           — SSE event stream`);
+  console.log(`    POST /api/v1/deals/webhooks         — Register webhook`);
   console.log(`    GET  /x402/services/:capability     — x402 payment requirements`);
   console.log(`    POST /x402/services/:capability     — x402 paid request\n`);
 
@@ -79,7 +83,11 @@ app.listen(config.port, () => {
     syncStartedAt = Date.now();
 
     // Respond immediately — sync runs in background
-    res.json({ status: "started", message: "Sync started — agents will appear as they are found. Refresh in ~30s." });
+    res.json({
+      status: "started",
+      message: "Sync started — agents will appear as they are found. Refresh in ~30s.",
+      rpcs: config.sepoliaRpcFallbacks.length,
+    });
 
     // Fire-and-forget
     const identitySyncInstance = new IdentitySync(db);
@@ -118,8 +126,29 @@ app.listen(config.port, () => {
       })
       .finally(() => { syncing = false; });
 
-    // Start escrow event listener
-    const listener = new EscrowEventListener(db);
+    // Start escrow event listener with webhook notifications
+    const listener = new EscrowEventListener(db, {
+      onDealFunded: (e) => webhookService.emit({
+        type: "deal.funded", nonce: e.nonce, timestamp: new Date().toISOString(),
+        data: { client: e.client, server: e.server, amount: Number(e.amount) },
+      }),
+      onDealCompleted: (e) => webhookService.emit({
+        type: "deal.completed", nonce: e.nonce, timestamp: new Date().toISOString(),
+        data: { server: e.server, amount: Number(e.amount) },
+      }),
+      onDisputeInitiated: (e) => webhookService.emit({
+        type: "deal.disputed", nonce: e.nonce, timestamp: new Date().toISOString(),
+        data: { client: e.client, server: e.server, amount: Number(e.amount) },
+      }),
+      onDisputeResolved: (e) => webhookService.emit({
+        type: "deal.resolved", nonce: e.nonce, timestamp: new Date().toISOString(),
+        data: { winner: e.winner, amount: Number(e.amount), ruling: Number(e.ruling) },
+      }),
+      onDealRefunded: (e) => webhookService.emit({
+        type: "deal.refunded", nonce: e.nonce, timestamp: new Date().toISOString(),
+        data: { client: e.client, amount: Number(e.amount) },
+      }),
+    });
     listener.start().catch((err) => {
       console.error("[EventListener] Failed to start:", err.message);
       console.log("[EventListener] Server continues without live events — use API to manage deals.");

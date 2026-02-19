@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { rateAgent } from "@/lib/api";
+import { Spinner } from "./Spinner";
+import { useToast } from "./Toast";
 
 interface Props {
   agentId: string;
@@ -19,6 +21,7 @@ export function RateAgentModal({ agentId, agentName, dealNonce, raterAddress, on
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,9 +37,11 @@ export function RateAgentModal({ agentId, agentName, dealNonce, raterAddress, on
         comment: comment.trim() || undefined,
       });
       setDone(true);
+      toast("success", `Rating submitted: ${score}/5`);
       setTimeout(onSuccess, 1200);
     } catch (err: any) {
       setError(err.message);
+      toast("error", err.message || "Failed to submit rating");
     } finally {
       setLoading(false);
     }
@@ -118,7 +123,7 @@ export function RateAgentModal({ agentId, agentName, dealNonce, raterAddress, on
                 disabled={loading || score === 0}
                 className="btn btn-primary flex-1"
               >
-                {loading ? "Submitting\u2026" : "Submit Rating"}
+                {loading ? <><Spinner size={14} className="inline mr-1.5" />Submitting&hellip;</> : "Submit Rating"}
               </button>
             </div>
           </form>
