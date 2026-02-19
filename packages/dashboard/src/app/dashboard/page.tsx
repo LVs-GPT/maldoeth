@@ -14,7 +14,10 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
-    setLoading(true);
+    // Only show full loading spinner on initial load, not on refresh after actions
+    if (deals.length === 0 && pendingApprovals.length === 0) {
+      setLoading(true);
+    }
     try {
       const [dealsData, pendingData] = await Promise.all([
         listDeals().catch(() => ({ deals: [] })),
@@ -30,7 +33,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [address]);
+  }, [address, deals.length, pendingApprovals.length]);
 
   useEffect(() => {
     loadData();

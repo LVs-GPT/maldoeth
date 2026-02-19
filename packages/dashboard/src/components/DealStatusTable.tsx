@@ -34,12 +34,17 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
   const [completing, setCompleting] = useState<string | null>(null);
   const [disputing, setDisputing] = useState<string | null>(null);
   const [ratingDeal, setRatingDeal] = useState<Deal | null>(null);
+  const [confirmingDispute, setConfirmingDispute] = useState<Deal | null>(null);
+  // Optimistic status overrides so the UI updates instantly after actions
+  const [statusOverrides, setStatusOverrides] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   const handleComplete = async (deal: Deal) => {
     setCompleting(deal.nonce);
     try {
       const res = await completeDeal(deal.nonce);
+      // Optimistic update — show new status immediately
+      setStatusOverrides((prev) => ({ ...prev, [deal.nonce]: "Completed" }));
       toast("success", "Deal completed. Funds released.", res?.txHash);
       setRatingDeal(deal);
       onUpdate?.();
@@ -51,10 +56,12 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
   };
 
   const handleDispute = async (deal: Deal) => {
-    if (!confirm("Open a dispute for this deal? This will freeze the USDC and pay an arbitration fee.")) return;
+    setConfirmingDispute(null);
     setDisputing(deal.nonce);
     try {
       const res = await disputeDeal(deal.nonce);
+      // Optimistic update — show new status immediately
+      setStatusOverrides((prev) => ({ ...prev, [deal.nonce]: "Disputed" }));
       toast("info", "Dispute opened. Funds frozen until ruling.", res?.txHash);
       onUpdate?.();
     } catch (err: any) {
@@ -64,7 +71,14 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
     }
   };
 
-  if (deals.length === 0) {
+  // Apply optimistic overrides to deals for rendering
+  const visibleDeals = deals.map((deal) =>
+    statusOverrides[deal.nonce]
+      ? { ...deal, status: statusOverrides[deal.nonce] }
+      : deal,
+  );
+
+  if (visibleDeals.length === 0) {
     return (
       <div className="bg-[var(--surface)] border border-[var(--border)] p-10 text-center">
         <p className="text-sm text-[var(--mid)]">
@@ -101,7 +115,7 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
             </tr>
           </thead>
           <tbody>
-            {deals.map((deal) => (
+            {visibleDeals.map((deal) => (
               <tr key={deal.nonce}>
                 <td className="text-center text-xs tabular-nums text-[var(--mid)]">
                   {deal.nonce.slice(0, 10)}&hellip;
@@ -127,7 +141,7 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
                     completing={completing}
                     disputing={disputing}
                     onComplete={handleComplete}
-                    onDispute={handleDispute}
+                    onDispute={setConfirmingDispute}
                     onRate={setRatingDeal}
                   />
                 </td>
@@ -139,7 +153,7 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
 
       {/* Mobile card list */}
       <div className="md:hidden space-y-3">
-        {deals.map((deal) => (
+        {visibleDeals.map((deal) => (
           <div
             key={deal.nonce}
             className="border border-[var(--border)] bg-[var(--bg)] overflow-hidden"
@@ -184,13 +198,49 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
                 completing={completing}
                 disputing={disputing}
                 onComplete={handleComplete}
-                onDispute={handleDispute}
+                onDispute={setConfirmingDispute}
                 onRate={setRatingDeal}
               />
             </div>
           </div>
         ))}
       </div>
+
+      {/* Dispute confirmation modal — replaces window.confirm() for mobile UX */}
+      {confirmingDispute && (
+        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setConfirmingDispute(null)}>
+          <div className="modal-content">
+            <h2 className="text-base font-bold text-[var(--foreground)]">
+              Open Dispute
+            </h2>
+            <p className="mt-2 text-xs text-[var(--mid)] leading-relaxed">
+              This will freeze the USDC in escrow and pay an arbitration fee.
+              A juror will review and rule on the dispute.
+            </p>
+            <p className="mt-3 text-[11px] text-[var(--dim)]">
+              Deal: {confirmingDispute.nonce.slice(0, 14)}&hellip;
+              &middot; ${(confirmingDispute.amount / 1e6).toFixed(2)} USDC
+            </p>
+
+            <hr className="section-rule my-5" />
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmingDispute(null)}
+                className="btn btn-ghost flex-1 min-h-[44px]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => handleDispute(confirmingDispute)}
+                className="btn btn-danger flex-1 min-h-[44px]"
+              >
+                Confirm Dispute
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {ratingDeal && userAddress && (
         <RateAgentModal
@@ -226,23 +276,25 @@ function DealActions({
   onDispute: (deal: Deal) => void;
   onRate: (deal: Deal) => void;
 }) {
+  const busy = completing === deal.nonce || disputing === deal.nonce;
+
   return (
     <div className="flex items-center justify-center gap-2">
       {deal.status === "Funded" && (
         <>
           <button
             onClick={() => onComplete(deal)}
-            disabled={completing === deal.nonce}
-            className="btn btn-success py-1 px-3 text-xs"
+            disabled={busy}
+            className="btn btn-success min-h-[44px] min-w-[88px] py-1 px-4 text-xs"
           >
-            {completing === deal.nonce ? <><Spinner size={12} className="inline mr-1" />Completing&hellip;</> : "Complete"}
+            {completing === deal.nonce ? <Spinner size={14} /> : "Complete"}
           </button>
           <button
             onClick={() => onDispute(deal)}
-            disabled={disputing === deal.nonce}
-            className="btn btn-danger py-1 px-3 text-xs"
+            disabled={busy}
+            className="btn btn-danger min-h-[44px] min-w-[88px] py-1 px-4 text-xs"
           >
-            {disputing === deal.nonce ? <><Spinner size={12} className="inline mr-1" />Disputing&hellip;</> : "Dispute"}
+            {disputing === deal.nonce ? <Spinner size={14} /> : "Dispute"}
           </button>
         </>
       )}
@@ -256,7 +308,7 @@ function DealActions({
       {deal.status === "Completed" && userAddress && (
         <button
           onClick={() => onRate(deal)}
-          className="btn btn-ghost py-1 px-3 text-xs"
+          className="btn btn-ghost min-h-[44px] min-w-[88px] py-1 px-4 text-xs"
         >
           Rate
         </button>
