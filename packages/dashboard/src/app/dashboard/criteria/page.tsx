@@ -93,7 +93,7 @@ export default function CriteriaPage() {
   }
 
   return (
-    <div className="space-y-10 pt-16">
+    <div className="space-y-8 pt-14 sm:space-y-10 sm:pt-16">
       {/* Header */}
       <header>
         <div className="section-label">Agentic Criteria</div>

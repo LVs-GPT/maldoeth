@@ -36,11 +36,11 @@ export default function RootLayout({
         <Providers>
           <div className="grid-bg" />
           <Navbar />
-          <main className="relative z-[1] mx-auto max-w-[980px] px-6 py-10 sm:px-8">
+          <main className="relative z-[1] mx-auto max-w-[980px] px-4 py-8 sm:px-8 sm:py-10">
             {children}
           </main>
           <footer className="relative z-[1] border-t border-[var(--border)]">
-            <div className="mx-auto max-w-[980px] px-6 py-12 sm:px-8">
+            <div className="mx-auto max-w-[980px] px-4 py-8 sm:px-8 sm:py-12">
               <div className="flex items-center justify-between flex-wrap gap-6">
                 <div className="flex flex-col gap-2">
                   <span className="text-sm font-bold text-[var(--green)]">maldo.eth</span>

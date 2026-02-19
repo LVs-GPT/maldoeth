@@ -68,7 +68,7 @@ export default function AgentProfilePage() {
         : "text-[var(--red)]";
 
   return (
-    <div className="space-y-10 pt-16">
+    <div className="space-y-8 pt-14 sm:space-y-10 sm:pt-16">
       {/* Breadcrumb */}
       <Link
         href="/agents"
@@ -79,30 +79,30 @@ export default function AgentProfilePage() {
       </Link>
 
       {/* Header */}
-      <header className="flex items-start justify-between gap-8">
-        <div className="flex-1">
+      <header className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
+        <div className="flex-1 min-w-0">
           <h1 className="text-[clamp(22px,3vw,32px)] font-bold tracking-tight text-[var(--foreground)]">
             {agent.name}
           </h1>
           <p className="mt-2 text-[13px] leading-[1.7] text-[var(--mid)]">
             {agent.description || "No description"}
           </p>
-          <p className="mt-2 text-[11px] text-[var(--dim)]">
+          <p className="mt-2 text-[11px] text-[var(--dim)] break-all">
             {agent.agentId}
           </p>
         </div>
 
-        <div className="flex flex-col items-end gap-3">
-          <div className="text-right">
+        <div className="flex items-center gap-6 sm:flex-col sm:items-end sm:gap-3">
+          <div className="sm:text-right">
             <p className={`text-[clamp(28px,4vw,42px)] font-bold tabular-nums leading-none ${scoreColor}`}>
               {reputation?.bayesianScore?.toFixed(1) || "N/A"}
             </p>
-            <p className="mt-2 text-[11px] text-[var(--mid)] tracking-[0.05em]">Bayesian Score</p>
+            <p className="mt-1 text-[11px] text-[var(--mid)] tracking-[0.05em]">Bayesian Score</p>
           </div>
           {isConnected && (
             <button
               onClick={() => setShowHireModal(true)}
-              className="btn btn-primary"
+              className="btn btn-primary shrink-0"
             >
               Hire Agent &rarr;
             </button>
@@ -140,7 +140,7 @@ export default function AgentProfilePage() {
       <hr className="section-rule" />
 
       {/* Stats — landing-style grid */}
-      <div className="grid grid-cols-2 gap-px overflow-hidden border border-[var(--border)] bg-[var(--border)] sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-px overflow-hidden border border-[var(--border)] bg-[var(--border)] sm:grid-cols-3 lg:grid-cols-5">
         <MetricCell label="Price" value={`$${(agent.basePrice / 1e6).toFixed(2)}`} />
         <MetricCell label="Raw Score" value={reputation?.score?.toFixed(2) || "0"} />
         <MetricCell label="Reviews" value={reputation?.reviewCount || 0} />
@@ -248,9 +248,9 @@ export default function AgentProfilePage() {
 
 function MetricCell({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-[var(--bg)] p-7">
+    <div className="bg-[var(--bg)] p-4 sm:p-7">
       <p className="text-[11px] text-[var(--mid)] tracking-[0.05em]">{label}</p>
-      <p className="mt-2 text-lg font-bold tabular-nums text-[var(--foreground)]">
+      <p className="mt-1 sm:mt-2 text-lg font-bold tabular-nums text-[var(--foreground)]">
         {String(value)}
       </p>
     </div>
@@ -259,7 +259,7 @@ function MetricCell({ label, value }: { label: string; value: string | number })
 
 function DetailRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline gap-6 bg-[var(--bg)] p-5 hover:bg-[var(--bg2)] transition-colors">
+    <div className="flex flex-col gap-1 bg-[var(--bg)] p-4 sm:p-5 sm:flex-row sm:items-baseline sm:gap-6 hover:bg-[var(--bg2)] transition-colors">
       <span className="w-24 shrink-0 text-[11px] text-[var(--mid)] tracking-[0.05em] uppercase">{label}</span>
       <span className="text-xs text-[var(--foreground)] break-all">
         {value}

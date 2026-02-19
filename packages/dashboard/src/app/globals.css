@@ -275,11 +275,19 @@
     max-width: 28rem;
     background: var(--surface);
     border: 1px solid var(--border);
-    padding: 2rem;
+    padding: 1.25rem;
+    margin: 0 1rem;
     animation: slideUp 0.2s ease-out;
     box-shadow:
       0 25px 50px -12px rgba(0, 0, 0, 0.5),
       0 0 0 1px rgba(255, 255, 255, 0.03);
+  }
+
+  @media (min-width: 640px) {
+    .modal-content {
+      padding: 2rem;
+      margin: 0;
+    }
   }
 
   /* Data table */
@@ -439,6 +447,16 @@
   .fade-edge-bottom {
     mask-image: linear-gradient(to bottom, black 85%, transparent);
   }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    height: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--dim);
+  }
 }
 
 /* ── Animations ── */
@@ -466,4 +484,21 @@
 @keyframes cursor-blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slideDown {
+  animation: slideDown 0.15s ease-out;
+}
+
+.animate-slideUp {
+  animation: slideUp 0.2s ease-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.15s ease-out;
 }
