@@ -8,6 +8,7 @@
     "packages/dashboard"
   ],
   "scripts": {
+    "preinstall": "npm cache clean --force 2>/dev/null || true",
     "dev": "npm run dev:server",
     "dev:server": "npm run dev --workspace=@maldo.eth/server",
     "dev:dashboard": "npm run dev --workspace=@maldo.eth/dashboard",
