@@ -1,16 +1,32 @@
 {
-  "name": "maldoeth",
+  "name": "maldo.eth",
   "private": true,
   "version": "0.1.0",
-  "description": "Trust layer for AI agent commerce",
-  "packageManager": "pnpm@9.0.0",
+  "description": "Maldo.eth v0.1 — Trust layer for AI agent commerce on Ethereum",
   "workspaces": [
-    "packages/*"
+    "packages/server",
+    "packages/dashboard"
   ],
   "scripts": {
+    "dev": "npm run dev:server",
+    "dev:server": "npm run dev --workspace=@maldo.eth/server",
+    "dev:dashboard": "npm run dev --workspace=@maldo.eth/dashboard",
+    "test": "npm run test --workspace=@maldo.eth/server",
     "test:contracts": "cd packages/contracts && forge test -vv",
+    "build:dashboard": "npm run build --workspace=dashboard",
     "deploy:sepolia": "cd packages/contracts && forge script script/Deploy.s.sol --rpc-url $SEPOLIA_RPC_URL --broadcast --verify",
-    "dev:server": "cd packages/server && pnpm dev",
     "lint": "cd packages/contracts && forge fmt --check"
+  },
+  "dependencies": {
+    "@noble/curves": "1.8.1",
+    "@noble/hashes": "1.7.1",
+    "@scure/bip32": "1.6.2",
+    "@scure/bip39": "1.5.4"
+  },
+  "overrides": {
+    "@noble/hashes": "$@noble/hashes",
+    "@noble/curves": "$@noble/curves",
+    "@scure/bip32": "$@scure/bip32",
+    "@scure/bip39": "$@scure/bip39"
   }
 }

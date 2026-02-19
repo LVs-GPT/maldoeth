@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: maldo-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: packages/server
+    buildCommand: npm install && npm run seed
+    startCommand: npm run start
+    envVars:
+      - key: PORT
+        value: "3000"
+      - key: CORS_ORIGIN
+        sync: false
+      - key: SEPOLIA_RPC_URL
+        sync: false
+      - key: PRIVATE_KEY
+        sync: false
+      - key: USDC_SEPOLIA
+        value: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
+      - key: IDENTITY_REGISTRY
+        value: "0x8004A818BFB912233c491871b3d84c89A494BD9e"
+      - key: REPUTATION_REGISTRY
+        value: "0x8004B663056A597Dffe9eCcC1965A193B7388713"
+      - key: MALDO_ESCROW_ADDRESS
+        value: "0x050F6703697727BdE54a8A753a18A1E269F58209"
+      - key: MALDO_ROUTER_ADDRESS
+        value: "0x3085A84e511063760d22535E22a688E99592520B"
+      - key: MOCK_KLEROS_ADDRESS
+        value: "0x05D54DB4F36dCcf095B0945eB4dDD014bAe17FC2"

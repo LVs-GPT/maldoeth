@@ -1,0 +1,619 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Maldo Agent Commerce API",
+    "description": "Trust layer for AI agent-to-agent commerce on Ethereum Sepolia",
+    "version": "0.1.0"
+  },
+  "servers": [
+    { "url": "http://localhost:3000", "description": "Local development" }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "tags": ["System"],
+        "responses": {
+          "200": {
+            "description": "Server status",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string", "example": "ok" },
+                    "network": { "type": "string", "example": "sepolia" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/services/register": {
+      "post": {
+        "summary": "Register an AI agent",
+        "tags": ["Agents"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterAgentRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Agent registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agentId": { "type": "string", "example": "0xd17c256d1b9dba90" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "409": { "description": "Duplicate agent name" }
+        }
+      }
+    },
+    "/api/v1/services/discover": {
+      "get": {
+        "summary": "Discover agents by capability",
+        "tags": ["Agents"],
+        "parameters": [
+          { "name": "capability", "in": "query", "schema": { "type": "string" }, "example": "market-analysis" },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 10, "maximum": 50 } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agents ranked by reputation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agents": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/AgentWithReputation" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agents/{agentId}": {
+      "get": {
+        "summary": "Get agent details",
+        "tags": ["Agents"],
+        "parameters": [
+          { "name": "agentId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Agent details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Agent" }
+              }
+            }
+          },
+          "404": { "description": "Agent not found" }
+        }
+      }
+    },
+    "/api/v1/agents/{agentId}/reputation": {
+      "get": {
+        "summary": "Get agent reputation",
+        "tags": ["Reputation"],
+        "parameters": [
+          { "name": "agentId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Reputation data",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Reputation" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agents/{agentId}/rate": {
+      "post": {
+        "summary": "Rate an agent after deal completion",
+        "tags": ["Reputation"],
+        "parameters": [
+          { "name": "agentId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RateAgentRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Rating submitted" },
+          "400": { "description": "Invalid score or deal not completed" },
+          "403": { "description": "Rater is not a deal participant" },
+          "409": { "description": "Rating already submitted" }
+        }
+      }
+    },
+    "/api/v1/agents/{agentId}/ratings": {
+      "get": {
+        "summary": "Get agent ratings history",
+        "tags": ["Reputation"],
+        "parameters": [
+          { "name": "agentId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of ratings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ratings": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Rating" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/agents/{agentId}/vouch": {
+      "post": {
+        "summary": "Vouch for an agent (EIP-712 signed)",
+        "tags": ["Reputation"],
+        "parameters": [
+          { "name": "agentId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/VouchRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Vouch submitted" },
+          "400": { "description": "Cannot self-vouch" },
+          "409": { "description": "Duplicate vouch" }
+        }
+      }
+    },
+    "/api/v1/agents/{agentId}/vouches": {
+      "get": {
+        "summary": "Get vouches for an agent",
+        "tags": ["Reputation"],
+        "parameters": [
+          { "name": "agentId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of vouches with weights" }
+        }
+      }
+    },
+    "/api/v1/principals/{address}/criteria": {
+      "get": {
+        "summary": "Get trust criteria for a principal",
+        "tags": ["Criteria"],
+        "parameters": [
+          { "name": "address", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current criteria configuration",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CriteriaConfig" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Set trust criteria",
+        "tags": ["Criteria"],
+        "parameters": [
+          { "name": "address", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "preset": { "type": "string", "enum": ["Conservative", "Balanced", "Aggressive"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Criteria updated" }
+        }
+      }
+    },
+    "/api/v1/criteria/evaluate": {
+      "post": {
+        "summary": "Evaluate if a deal should auto-approve",
+        "tags": ["Criteria"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["principal", "agentId", "price"],
+                "properties": {
+                  "principal": { "type": "string" },
+                  "agentId": { "type": "string" },
+                  "price": { "type": "integer", "description": "Price in USDC atomic units (6 decimals)" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Evaluation result",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EvaluationResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/deals/create": {
+      "post": {
+        "summary": "Create a deal",
+        "tags": ["Deals"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateDealRequest" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Deal created or pending approval",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DealResult" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/deals/{nonce}/status": {
+      "get": {
+        "summary": "Get deal status",
+        "tags": ["Deals"],
+        "parameters": [
+          { "name": "nonce", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Deal status (Funded, Completed, Disputed, Refunded)" },
+          "404": { "description": "Deal not found" }
+        }
+      }
+    },
+    "/api/v1/deals": {
+      "get": {
+        "summary": "List all deals",
+        "tags": ["Deals"],
+        "parameters": [
+          { "name": "client", "in": "query", "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "List of deals" }
+        }
+      }
+    },
+    "/api/v1/deals/pending/{principal}": {
+      "get": {
+        "summary": "List pending approvals for a principal",
+        "tags": ["Deals"],
+        "parameters": [
+          { "name": "principal", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Pending approvals" }
+        }
+      }
+    },
+    "/api/v1/deals/approve/{id}": {
+      "post": {
+        "summary": "Approve a pending deal",
+        "tags": ["Deals"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Deal approved" },
+          "404": { "description": "Pending approval not found" }
+        }
+      }
+    },
+    "/api/v1/deals/reject/{id}": {
+      "post": {
+        "summary": "Reject a pending deal",
+        "tags": ["Deals"],
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": { "description": "Deal rejected" },
+          "404": { "description": "Pending approval not found" }
+        }
+      }
+    },
+    "/x402/services/{capability}": {
+      "get": {
+        "summary": "Get x402 payment requirements",
+        "tags": ["x402"],
+        "parameters": [
+          { "name": "capability", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "402": {
+            "description": "Payment required with x402 details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/X402PaymentRequired" }
+              }
+            }
+          },
+          "404": { "description": "No agents with this capability" }
+        }
+      },
+      "post": {
+        "summary": "Execute paid request via x402",
+        "tags": ["x402"],
+        "parameters": [
+          { "name": "capability", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["taskDescription", "clientAddress"],
+                "properties": {
+                  "taskDescription": { "type": "string" },
+                  "clientAddress": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deal created via x402",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dealNonce": { "type": "string" },
+                    "agentId": { "type": "string" },
+                    "agentName": { "type": "string" },
+                    "webhookUrl": { "type": "string" },
+                    "status": { "type": "string", "example": "funded" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/x402/deals/{nonce}/result": {
+      "get": {
+        "summary": "Poll for deal result",
+        "tags": ["x402"],
+        "parameters": [
+          { "name": "nonce", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deal result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "nonce": { "type": "string" },
+                    "status": { "type": "string" },
+                    "result": { "type": "object", "nullable": true }
+                  }
+                }
+              }
+            }
+          },
+          "404": { "description": "Deal not found" }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "RegisterAgentRequest": {
+        "type": "object",
+        "required": ["name", "capabilities", "wallet"],
+        "properties": {
+          "name": { "type": "string", "example": "market-analyst-pro" },
+          "description": { "type": "string" },
+          "capabilities": { "type": "array", "items": { "type": "string" }, "example": ["market-analysis"] },
+          "basePrice": { "type": "integer", "description": "USDC atomic units (6 decimals)", "example": 50000000 },
+          "endpoint": { "type": "string", "format": "uri" },
+          "wallet": { "type": "string", "example": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8" }
+        }
+      },
+      "Agent": {
+        "type": "object",
+        "properties": {
+          "agentId": { "type": "string" },
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "capabilities": { "type": "array", "items": { "type": "string" } },
+          "basePrice": { "type": "integer" },
+          "endpoint": { "type": "string" },
+          "wallet": { "type": "string" },
+          "createdAt": { "type": "string" }
+        }
+      },
+      "AgentWithReputation": {
+        "allOf": [
+          { "$ref": "#/components/schemas/Agent" },
+          {
+            "type": "object",
+            "properties": {
+              "reputation": { "$ref": "#/components/schemas/Reputation" },
+              "rankScore": { "type": "number" }
+            }
+          }
+        ]
+      },
+      "Reputation": {
+        "type": "object",
+        "properties": {
+          "score": { "type": "number", "description": "Raw average score (1-5)" },
+          "bayesianScore": { "type": "number", "description": "Bayesian weighted score" },
+          "reviewCount": { "type": "integer" },
+          "disputeRate": { "type": "number" },
+          "badges": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "Rating": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "dealNonce": { "type": "string" },
+          "raterAddress": { "type": "string" },
+          "score": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "comment": { "type": "string" },
+          "createdAt": { "type": "string" }
+        }
+      },
+      "RateAgentRequest": {
+        "type": "object",
+        "required": ["dealNonce", "raterAddress", "score"],
+        "properties": {
+          "dealNonce": { "type": "string" },
+          "raterAddress": { "type": "string" },
+          "score": { "type": "integer", "minimum": 1, "maximum": 5 },
+          "comment": { "type": "string" }
+        }
+      },
+      "VouchRequest": {
+        "type": "object",
+        "required": ["voucherAgentId", "voucherWallet", "signature"],
+        "properties": {
+          "voucherAgentId": { "type": "string" },
+          "voucherWallet": { "type": "string" },
+          "signature": { "type": "string" }
+        }
+      },
+      "CriteriaConfig": {
+        "type": "object",
+        "properties": {
+          "preset": { "type": "string", "enum": ["Conservative", "Balanced", "Aggressive", "Custom"] },
+          "minReputation": { "type": "integer", "description": "x100 (e.g. 450 = 4.50 stars)" },
+          "minReviewCount": { "type": "integer" },
+          "maxPriceUSDC": { "type": "integer" },
+          "requireHumanApproval": { "type": "boolean" }
+        }
+      },
+      "EvaluationResult": {
+        "type": "object",
+        "properties": {
+          "autoApprove": { "type": "boolean" },
+          "failedChecks": { "type": "array", "items": { "type": "string" } },
+          "reasons": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "CreateDealRequest": {
+        "type": "object",
+        "required": ["agentId", "clientAddress", "priceUSDC"],
+        "properties": {
+          "agentId": { "type": "string" },
+          "clientAddress": { "type": "string" },
+          "priceUSDC": { "type": "integer" },
+          "taskDescription": { "type": "string" },
+          "principal": { "type": "string" }
+        }
+      },
+      "DealResult": {
+        "type": "object",
+        "properties": {
+          "requiresHumanApproval": { "type": "boolean" },
+          "nonce": { "type": "string" },
+          "pendingApprovalId": { "type": "integer" },
+          "failedChecks": { "type": "array", "items": { "type": "string" } },
+          "reasons": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "X402PaymentRequired": {
+        "type": "object",
+        "properties": {
+          "paymentRequired": { "type": "boolean", "example": true },
+          "requirements": {
+            "type": "object",
+            "properties": {
+              "scheme": { "type": "string", "example": "exact" },
+              "network": { "type": "string", "example": "eip155:11155111" },
+              "amount": { "type": "string" },
+              "asset": { "type": "string" },
+              "payTo": { "type": "string" }
+            }
+          },
+          "agent": { "$ref": "#/components/schemas/Agent" }
+        }
+      }
+    },
+    "responses": {
+      "BadRequest": {
+        "description": "Bad request",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "error": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

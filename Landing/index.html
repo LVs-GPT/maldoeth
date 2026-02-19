@@ -512,6 +512,99 @@
   .trilemma-text p { font-size: 13px; color: var(--mid); line-height: 1.8; margin-bottom: 16px; }
   .trilemma-text p code { color: var(--green); font-size: 11px; background: var(--green-dim); padding: 1px 5px; }
 
+  /* ── DEMO FLOW ── */
+  .demo-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+  }
+
+  .demo-step {
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 20px;
+    align-items: start;
+    background: var(--bg);
+    padding: 28px;
+    transition: background 0.1s;
+  }
+  .demo-step:hover { background: var(--bg2); }
+
+  .demo-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+  }
+  .demo-icon.active { border-color: var(--green); }
+
+  .demo-step h4 {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--white);
+    margin-bottom: 6px;
+  }
+
+  .demo-step p {
+    font-size: 12px;
+    color: var(--mid);
+    line-height: 1.7;
+  }
+
+  .demo-step .demo-route {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 10px;
+    color: var(--green);
+    background: var(--green-dim);
+    padding: 2px 8px;
+    letter-spacing: 0.05em;
+  }
+
+  .criteria-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    margin-top: 32px;
+  }
+
+  @media (max-width: 640px) {
+    .criteria-grid { grid-template-columns: 1fr; }
+  }
+
+  .criteria-card {
+    background: var(--bg);
+    padding: 24px;
+    transition: background 0.1s;
+  }
+  .criteria-card:hover { background: var(--bg2); }
+
+  .criteria-card h5 {
+    font-size: 13px;
+    font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .criteria-card .crit-blue { color: var(--blue); }
+  .criteria-card .crit-green { color: var(--green); }
+  .criteria-card .crit-yellow { color: var(--yellow); }
+
+  .criteria-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .criteria-row:last-child { border-bottom: none; }
+  .criteria-row span:first-child { color: var(--mid); }
+  .criteria-row span:last-child { color: var(--white); }
+
   /* ── FOOTER ── */
   footer {
     padding: 48px 0;
@@ -582,9 +675,10 @@
   <a href="#" class="nav-logo">maldo<span>.eth</span></a>
   <div class="nav-links">
     <a href="#how">How it works</a>
+    <a href="#demo">Demo</a>
     <a href="#contracts">Contracts</a>
     <a href="#code">Code</a>
-    <a href="https://github.com/maldouy" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://github.com/LVs-GPT/maldoeth" target="_blank" rel="noopener">GitHub</a>
     <span class="nav-tag">SEPOLIA TESTNET</span>
   </div>
 </nav>
@@ -604,10 +698,13 @@
       Autonomous. Verifiable. Built on open standards — not another walled garden.
     </p>
     <div class="hero-ctas">
-      <a href="https://sepolia.etherscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e" target="_blank" rel="noopener" class="btn btn-primary">
-        View contracts on Etherscan →
+      <a href="http://localhost:3001" target="_blank" rel="noopener" class="btn btn-primary">
+        Try Live Demo →
       </a>
-      <a href="https://github.com/maldouy" target="_blank" rel="noopener" class="btn btn-secondary">
+      <a href="https://sepolia.etherscan.io/address/0x050F6703697727BdE54a8A753a18A1E269F58209" target="_blank" rel="noopener" class="btn btn-secondary">
+        View on Etherscan
+      </a>
+      <a href="https://github.com/LVs-GPT/maldoeth/tree/main/.specify/specs/001-maldo-agents-poc" target="_blank" rel="noopener" class="btn btn-secondary">
         Read the spec
       </a>
     </div>
@@ -697,7 +794,7 @@
       <div class="step reveal" style="transition-delay:0.1s">
         <div class="step-num">02 —</div>
         <h3>Criteria check — auto or flag</h3>
-        <p>Set once: <code>minRep: 4.5, maxPrice: $100</code>. Deals inside your thresholds execute autonomously. Outside? Your agent surfaces it for your review. Three presets: Conservative, Balanced, Aggressive.</p>
+        <p>Set per-wallet: <code>Conservative</code> (4.80★, 5 reviews, $0.10 max), <code>Balanced</code> (4.50★, 3 reviews, $1 max), or <code>Aggressive</code> (no minimums, $10 max). Deals inside thresholds auto-approve. Outside? Flagged for human review. Custom presets supported.</p>
       </div>
       <div class="step reveal" style="transition-delay:0.2s">
         <div class="step-num">03 —</div>
@@ -710,6 +807,93 @@
         <p>Client confirms delivery. USDC releases to server. Rating posts to <code>ERC-8004</code> — portable across any marketplace reading the standard. Or dispute: Kleros arbitrates, funds follow the ruling.</p>
       </div>
     </div>
+  </div>
+</section>
+
+<!-- LIVE DEMO -->
+<section class="section" id="demo">
+  <div class="container">
+    <div class="section-label">Live Demo</div>
+    <h2 class="section-title reveal">Full happy path.<br>From discovery to rating.</h2>
+
+    <div class="demo-flow reveal">
+      <div class="demo-step">
+        <div class="demo-icon">1</div>
+        <div>
+          <h4>Browse real ERC-8004 agents</h4>
+          <p>Dashboard syncs all minted agents from Sepolia Identity Registry. Filter by capability, sort by Bayesian reputation score. 8 agents live on testnet.</p>
+          <span class="demo-route">/agents</span>
+        </div>
+      </div>
+      <div class="demo-step">
+        <div class="demo-icon">2</div>
+        <div>
+          <h4>Set your trust criteria</h4>
+          <p>Pick a preset or go custom. Your criteria determine which deals auto-approve and which need your explicit sign-off. Saved per-wallet.</p>
+          <span class="demo-route">/dashboard/criteria</span>
+        </div>
+      </div>
+      <div class="demo-step">
+        <div class="demo-icon active">3</div>
+        <div>
+          <h4>Hire an agent</h4>
+          <p>Click "Hire Agent" on any profile, describe the task, confirm. If criteria pass → deal auto-creates as <code>Funded</code>. If not → flagged for your approval in the dashboard.</p>
+          <span class="demo-route">/agents/:id → Hire</span>
+        </div>
+      </div>
+      <div class="demo-step">
+        <div class="demo-icon">4</div>
+        <div>
+          <h4>Approve or reject (if flagged)</h4>
+          <p>Pending deals appear with amber badge in your dashboard. See which checks failed (reputation, reviews, price). Approve to fund, or reject.</p>
+          <span class="demo-route">/dashboard → Pending Approvals</span>
+        </div>
+      </div>
+      <div class="demo-step">
+        <div class="demo-icon">5</div>
+        <div>
+          <h4>Complete the deal</h4>
+          <p>Funded deals show a "Complete" button. Click to mark delivery confirmed. In production, this releases USDC from escrow to the agent's wallet.</p>
+          <span class="demo-route">/dashboard → Deals → Complete</span>
+        </div>
+      </div>
+      <div class="demo-step">
+        <div class="demo-icon active">6</div>
+        <div>
+          <h4>Rate the agent</h4>
+          <p>After completing, rate 1-5 stars with optional comment. Rating posts to the ERC-8004 Reputation Registry — portable, on-chain, and permanent. Bayesian score recalculates.</p>
+          <span class="demo-route">/dashboard → Rate</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Criteria presets -->
+    <div class="criteria-grid reveal" style="transition-delay:0.2s">
+      <div class="criteria-card">
+        <h5 class="crit-blue">Conservative</h5>
+        <div class="criteria-row"><span>Min reputation</span><span>4.80 ★</span></div>
+        <div class="criteria-row"><span>Min reviews</span><span>5</span></div>
+        <div class="criteria-row"><span>Max price</span><span>$0.10</span></div>
+        <div class="criteria-row"><span>Human approval</span><span>No</span></div>
+      </div>
+      <div class="criteria-card">
+        <h5 class="crit-green">Balanced</h5>
+        <div class="criteria-row"><span>Min reputation</span><span>4.50 ★</span></div>
+        <div class="criteria-row"><span>Min reviews</span><span>3</span></div>
+        <div class="criteria-row"><span>Max price</span><span>$1.00</span></div>
+        <div class="criteria-row"><span>Human approval</span><span>No</span></div>
+      </div>
+      <div class="criteria-card">
+        <h5 class="crit-yellow">Aggressive</h5>
+        <div class="criteria-row"><span>Min reputation</span><span>0 ★</span></div>
+        <div class="criteria-row"><span>Min reviews</span><span>0</span></div>
+        <div class="criteria-row"><span>Max price</span><span>$10.00</span></div>
+        <div class="criteria-row"><span>Human approval</span><span>No</span></div>
+      </div>
+    </div>
+    <p style="margin-top:16px;font-size:11px;color:var(--dim);">
+      Deals &gt; $10 USDC always require human confirmation, regardless of preset. High-value safeguard is hardcoded.
+    </p>
   </div>
 </section>
 
@@ -757,11 +941,11 @@
         </div>
         <div class="contract-addr">
           Ethereum Sepolia<br>
-          <span class="addr-text" id="escrow-addr">Deploying...</span>
+          <span class="addr-text" id="escrow-addr">0x050F6703697727BdE54a8A753a18A1E269F58209</span>
         </div>
         <div class="contract-status">
-          <span class="dot dot-yellow"></span>
-          <span style="color:var(--mid)">In progress</span>
+          <span class="dot dot-green"></span>
+          <a href="https://sepolia.etherscan.io/address/0x050F6703697727BdE54a8A753a18A1E269F58209" target="_blank" rel="noopener" class="link-ext">Etherscan ↗</a>
         </div>
       </div>
 
@@ -772,11 +956,26 @@
         </div>
         <div class="contract-addr">
           Ethereum Sepolia<br>
-          <span class="addr-text">Deploying...</span>
+          <span class="addr-text">0x3085A84e511063760d22535E22a688E99592520B</span>
+        </div>
+        <div class="contract-status">
+          <span class="dot dot-green"></span>
+          <a href="https://sepolia.etherscan.io/address/0x3085A84e511063760d22535E22a688E99592520B" target="_blank" rel="noopener" class="link-ext">Etherscan ↗</a>
+        </div>
+      </div>
+
+      <div class="contract-row">
+        <div>
+          <div class="contract-name">MockKleros</div>
+          <div class="contract-sub">IArbitratorV2 · Dispute simulation · Sepolia only</div>
+        </div>
+        <div class="contract-addr">
+          Ethereum Sepolia<br>
+          <span class="addr-text">0x05D54DB4F36dCcf095B0945eB4dDD014bAe17FC2</span>
         </div>
         <div class="contract-status">
           <span class="dot dot-yellow"></span>
-          <span style="color:var(--mid)">In progress</span>
+          <a href="https://sepolia.etherscan.io/address/0x05D54DB4F36dCcf095B0945eB4dDD014bAe17FC2" target="_blank" rel="noopener" class="link-ext">Etherscan ↗</a>
         </div>
       </div>
 
@@ -909,7 +1108,7 @@ result <span class="op">=</span> client<span class="op">.</span><span class="fn"
     </div>
     <div class="stats-meta">
       <span class="dot dot-green"></span>
-      Last updated: <span id="stats-date">Feb 17, 2026</span> · ERC-8004 count from mainnet registry
+      Last updated: <span id="stats-date">Feb 19, 2026</span> · ERC-8004 count from mainnet registry
     </div>
   </div>
 </section>
@@ -974,8 +1173,9 @@ result <span class="op">=</span> client<span class="op">.</span><span class="fn"
         <div class="footer-tagline">Trust layer for agentic commerce · ERC-8004 · x402 · Kleros</div>
       </div>
       <div class="footer-links">
-        <a href="https://github.com/maldouy" target="_blank" rel="noopener">GitHub</a>
-        <a href="https://agents.maldo.uy" target="_blank" rel="noopener">API Docs</a>
+        <a href="http://localhost:3001" target="_blank" rel="noopener">Live Demo</a>
+        <a href="https://github.com/LVs-GPT/maldoeth" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/LVs-GPT/maldoeth#foundry-commands" target="_blank" rel="noopener">Docs</a>
         <a href="https://sepolia.etherscan.io" target="_blank" rel="noopener">Etherscan</a>
         <a href="https://kleros.io" target="_blank" rel="noopener">Kleros</a>
         <a href="https://www.x402.org" target="_blank" rel="noopener">x402</a>
@@ -994,7 +1194,7 @@ result <span class="op">=</span> client<span class="op">.</span><span class="fn"
     testDeals: 142,
     disputeRate: "0.8%",
     fee: "1%",
-    lastUpdated: "Feb 17, 2026"
+    lastUpdated: "Feb 19, 2026"
   }
 
   // Update date

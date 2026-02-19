@@ -77,9 +77,9 @@ change the arbitrator address in the constructor. No code changes.
 ## Contract Addresses (Sepolia — fill after deploy)
 
 ```
-MOCK_KLEROS_ADDRESS=
-MALDO_ESCROW_ADDRESS=
-MALDO_ROUTER_ADDRESS=
+MOCK_KLEROS_ADDRESS=0x05D54DB4F36dCcf095B0945eB4dDD014bAe17FC2
+MALDO_ESCROW_ADDRESS=0x050F6703697727BdE54a8A753a18A1E269F58209
+MALDO_ROUTER_ADDRESS=0x3085A84e511063760d22535E22a688E99592520B
 ```
 
 ## Key Invariants (must hold in all tests)
