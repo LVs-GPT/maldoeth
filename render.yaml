@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     rootDir: packages/server
-    buildCommand: npm install && npm run seed
+    buildCommand: npm install && npm rebuild better-sqlite3 && npm run seed
     startCommand: npm run start
     envVars:
       - key: PORT
