@@ -47,7 +47,8 @@ function computeBadges(rep: ReputationData & { completedDeals?: number; register
   const completed = rep.completedDeals ?? rep.reviewCount;
   if (completed >= 50) badges.push("50-deals");
   if (completed >= 100) badges.push("100-deals");
-  if (rep.disputeRate === 0 && completed >= 20) badges.push("zero-disputes-streak");
+  if (rep.disputeRate === 0 && completed >= 5) badges.push("zero-disputes-streak");
+  if (rep.score >= 4.5 && completed >= 5) badges.push("top-rated");
   if ((rep.registeredDays ?? 0) >= 180) badges.push("veteran");
   return badges;
 }

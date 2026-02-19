@@ -21,6 +21,7 @@ const BADGE_CONFIG: Record<string, { label: string; color: string }> = {
   "50-deals": { label: "50+ deals", color: "border-[rgba(168,85,247,0.3)] text-[#a855f7]" },
   "100-deals": { label: "100+ deals", color: "border-[var(--green-dim)] text-[var(--green)]" },
   "zero-disputes-streak": { label: "0 disputes", color: "border-[rgba(16,185,129,0.3)] text-[#10b981]" },
+  "top-rated": { label: "Top rated", color: "border-[rgba(255,204,0,0.3)] text-[var(--yellow)]" },
 };
 
 function Stars({ score }: { score: number }) {

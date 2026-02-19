@@ -12,6 +12,7 @@ import { RatingService } from "./services/rating.js";
 import { VouchService } from "./services/vouch.js";
 import { DbReputationAdapter } from "./services/db-reputation-adapter.js";
 import { ChainReputationAdapter } from "./services/chain-reputation-adapter.js";
+import { HybridReputationAdapter } from "./services/hybrid-reputation-adapter.js";
 import { config } from "./config.js";
 
 import { createServicesRouter } from "./routes/services.js";
@@ -38,9 +39,11 @@ export function createApp(deps: AppDeps) {
   app.use(express.json());
   app.use(morgan("short"));
 
-  // Services — use on-chain reputation when RPC is available, fallback to DB
+  // Services — hybrid adapter: tries on-chain first, falls back to DB for agents
+  // not registered on-chain (e.g. demo/seed agents)
+  const dbRep = new DbReputationAdapter(deps.db);
   const hasRpc = config.sepoliaRpcUrl && config.sepoliaRpcUrl !== "https://sepolia.infura.io/v3/demo";
-  const repAdapter = hasRpc ? new ChainReputationAdapter() : new DbReputationAdapter(deps.db);
+  const repAdapter = hasRpc ? new HybridReputationAdapter(new ChainReputationAdapter(), dbRep) : dbRep;
   const registration = new RegistrationService(deps.db);
   const discovery = new DiscoveryService(deps.db, repAdapter);
   const criteriaService = new CriteriaService(deps.db, repAdapter);
