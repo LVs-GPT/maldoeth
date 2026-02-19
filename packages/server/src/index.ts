@@ -79,7 +79,11 @@ app.listen(config.port, () => {
     syncStartedAt = Date.now();
 
     // Respond immediately — sync runs in background
-    res.json({ status: "started", message: "Sync started — agents will appear as they are found. Refresh in ~30s." });
+    res.json({
+      status: "started",
+      message: "Sync started — agents will appear as they are found. Refresh in ~30s.",
+      rpcs: config.sepoliaRpcFallbacks.length,
+    });
 
     // Fire-and-forget
     const identitySyncInstance = new IdentitySync(db);
