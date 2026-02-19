@@ -7,20 +7,40 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /**
  * Known deployment block for the ERC-8004 Identity Registry on Sepolia.
- * This avoids scanning millions of empty blocks from genesis.
+ * Only used as fallback when subgraph is unavailable.
  * Override via IDENTITY_START_BLOCK env var.
  */
 const DEFAULT_START_BLOCK = 9_989_417;
 
+// ─── Subgraph GraphQL query ──────────────────────────────────────────
+const AGENTS_QUERY = `
+  query Agents($first: Int!, $skip: Int!) {
+    agents(
+      first: $first
+      skip: $skip
+      orderBy: registeredAt
+      orderDirection: asc
+    ) {
+      agentId
+      owner
+      agentURI
+      blockNumber
+      registeredAt
+      txHash
+    }
+  }
+`;
+
 /**
  * Syncs ERC-8004 Identity NFTs from Sepolia into the local agents table.
  *
- * Scans `Registered(uint256 indexed agentId, string agentURI, address indexed owner)`
- * events from the real ERC-8004 Identity Registry — much more targeted than
- * generic ERC-721 Transfer events.
+ * Strategy:
+ *   1. If SUBGRAPH_URL is set → query The Graph (fast, reliable, paginated)
+ *   2. Fallback → scan RPC logs with multi-RPC fallback (legacy)
  *
- * Uses multi-RPC fallback: if the primary RPC fails, automatically tries
- * alternative public endpoints (Ankr, PublicNode, DRPC, etc.).
+ * The subgraph indexes Registered/URIUpdated/Transfer events automatically.
+ * Metadata resolution (IPFS, data:, HTTP) still happens server-side since
+ * subgraph mappings can't do arbitrary HTTP fetches.
  */
 export class IdentitySync {
   private provider!: ethers.JsonRpcProvider;
@@ -50,9 +70,199 @@ export class IdentitySync {
     this.reputation = new ethers.Contract(config.reputationRegistry, ERC8004_REPUTATION_ABI, this.provider);
   }
 
-  /**
-   * Try to get the current block number, cycling through fallback RPCs if needed.
-   */
+  // ═══════════════════════════════════════════════════════════════════════
+  // PUBLIC — main entry point
+  // ═══════════════════════════════════════════════════════════════════════
+
+  async sync(): Promise<number> {
+    // Try subgraph first — instant, paginated, no RPC rate limits
+    if (config.subgraphUrl) {
+      try {
+        return await this.syncFromSubgraph();
+      } catch (err: any) {
+        console.warn(`[IdentitySync] Subgraph failed: ${err.message} — falling back to RPC scan`);
+      }
+    }
+
+    // Fallback: legacy RPC scan
+    return this.syncFromRpc();
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SUBGRAPH PATH — The Graph (preferred)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  private async syncFromSubgraph(): Promise<number> {
+    console.log(`[IdentitySync] Syncing via subgraph: ${config.subgraphUrl}`);
+
+    const PAGE_SIZE = 100;
+    let skip = 0;
+    let synced = 0;
+    let totalFetched = 0;
+
+    while (true) {
+      const res = await fetch(config.subgraphUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: AGENTS_QUERY,
+          variables: { first: PAGE_SIZE, skip },
+        }),
+        signal: AbortSignal.timeout(15_000),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Subgraph HTTP ${res.status}: ${await res.text()}`);
+      }
+
+      const json = (await res.json()) as { data?: { agents?: SubgraphAgent[] }; errors?: any[] };
+
+      if (json.errors?.length) {
+        throw new Error(`Subgraph query error: ${JSON.stringify(json.errors[0])}`);
+      }
+
+      const agents = json.data?.agents || [];
+      totalFetched += agents.length;
+
+      for (const raw of agents) {
+        // Skip if already in DB
+        const existing = this.db
+          .prepare("SELECT agent_id FROM agents WHERE agent_id = ?")
+          .get(raw.agentId);
+        if (existing) continue;
+
+        try {
+          const agent = await this.fetchAgentData(raw.agentId, raw.owner, raw.agentURI);
+          if (agent) {
+            this.upsertAgent(agent);
+            synced++;
+            console.log(`[IdentitySync] Synced agent #${raw.agentId}: ${agent.name}`);
+          } else {
+            console.warn(`[IdentitySync] Agent #${raw.agentId}: metadata could not be resolved`);
+          }
+        } catch (err: any) {
+          console.warn(`[IdentitySync] Failed to sync agent #${raw.agentId}:`, err.message);
+        }
+
+        // Throttle metadata fetches
+        await sleep(300);
+      }
+
+      // Done when page is smaller than PAGE_SIZE
+      if (agents.length < PAGE_SIZE) break;
+      skip += PAGE_SIZE;
+    }
+
+    console.log(`[IdentitySync] Subgraph sync done — ${synced} new agents (${totalFetched} total on-chain).`);
+    return synced;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // RPC PATH — legacy block scan (fallback)
+  // ═══════════════════════════════════════════════════════════════════════
+
+  private async syncFromRpc(): Promise<number> {
+    console.log("[IdentitySync] Falling back to RPC block scan...");
+    console.log(`[IdentitySync] Contract: ${config.identityRegistry}`);
+    console.log(`[IdentitySync] RPCs available: ${this.rpcUrls.length}`);
+
+    await this.findWorkingRpc();
+
+    const currentBlock = await this.provider.getBlockNumber();
+    const fromBlock = this.startBlock;
+
+    console.log(`[IdentitySync] Scanning blocks ${fromBlock}–${currentBlock} (~${((currentBlock - fromBlock) / 1000).toFixed(0)}k blocks)`);
+
+    const registeredFilter = this.identity.filters.Registered();
+    const CHUNK_SIZE = 50_000;
+    const DELAY_MS = 350;
+    const allEvents: ethers.EventLog[] = [];
+
+    const totalChunks = Math.ceil((currentBlock - fromBlock) / CHUNK_SIZE);
+    let chunkIdx = 0;
+    let consecutiveFailures = 0;
+
+    for (let from = fromBlock; from <= currentBlock; from += CHUNK_SIZE) {
+      const to = Math.min(from + CHUNK_SIZE - 1, currentBlock);
+      chunkIdx++;
+      let success = false;
+
+      for (let rpcAttempt = 0; rpcAttempt < this.rpcUrls.length && !success; rpcAttempt++) {
+        let retries = 2;
+        while (retries > 0 && !success) {
+          try {
+            const events = await this.identity.queryFilter(registeredFilter, from, to);
+            for (const e of events) {
+              if (e instanceof ethers.EventLog) {
+                allEvents.push(e);
+              }
+            }
+            success = true;
+            consecutiveFailures = 0;
+          } catch {
+            retries--;
+            if (retries > 0) await sleep(DELAY_MS * 2);
+          }
+        }
+
+        if (!success && rpcAttempt < this.rpcUrls.length - 1) {
+          const nextUrl = this.rpcUrls[rpcAttempt + 1];
+          console.warn(`[IdentitySync] Switching RPC → ${nextUrl.replace(/https?:\/\//, "").split("/")[0]}`);
+          this.setProvider(new ethers.JsonRpcProvider(nextUrl));
+        }
+      }
+
+      if (!success) {
+        consecutiveFailures++;
+        console.warn(`[IdentitySync] Chunk ${chunkIdx}/${totalChunks} failed on ALL RPCs, skipping range ${from}–${to}`);
+        if (consecutiveFailures >= 5) {
+          console.error(`[IdentitySync] ${consecutiveFailures} consecutive chunk failures — aborting scan.`);
+          break;
+        }
+      }
+
+      if (chunkIdx % 10 === 0 || chunkIdx === totalChunks) {
+        console.log(`[IdentitySync] Progress: ${chunkIdx}/${totalChunks} chunks, ${allEvents.length} Registered events found`);
+      }
+
+      if (chunkIdx < totalChunks) await sleep(DELAY_MS);
+    }
+
+    console.log(`[IdentitySync] Scan complete — found ${allEvents.length} Registered events.`);
+
+    let synced = 0;
+    for (const event of allEvents) {
+      const agentId = event.args[0].toString();
+      const agentURI = event.args[1] as string;
+      const owner = event.args[2] as string;
+
+      const existing = this.db
+        .prepare("SELECT agent_id FROM agents WHERE agent_id = ?")
+        .get(agentId);
+      if (existing) continue;
+
+      try {
+        const agent = await this.fetchAgentData(agentId, owner, agentURI);
+        if (agent) {
+          this.upsertAgent(agent);
+          synced++;
+          console.log(`[IdentitySync] Synced agent #${agentId}: ${agent.name}`);
+        }
+      } catch (err: any) {
+        console.warn(`[IdentitySync] Failed to sync agent #${agentId}:`, err.message);
+      }
+
+      await sleep(500);
+    }
+
+    console.log(`[IdentitySync] Done — synced ${synced} new agents (${allEvents.length} total on-chain).`);
+    return synced;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SHARED — metadata resolution + DB
+  // ═══════════════════════════════════════════════════════════════════════
+
   private async findWorkingRpc(): Promise<void> {
     for (let i = 0; i < this.rpcUrls.length; i++) {
       const url = this.rpcUrls[i];
@@ -71,124 +281,7 @@ export class IdentitySync {
     throw new Error("All Sepolia RPCs failed — cannot sync. Set SEPOLIA_RPC_URL to a working endpoint.");
   }
 
-  async sync(): Promise<number> {
-    console.log("[IdentitySync] Scanning ERC-8004 Identity Registry for agents...");
-    console.log(`[IdentitySync] Contract: ${config.identityRegistry}`);
-    console.log(`[IdentitySync] RPCs available: ${this.rpcUrls.length} (primary: ${this.rpcUrls[0].replace(/https?:\/\//, "").split("/")[0]})`);
-
-    // Find a working RPC before starting
-    await this.findWorkingRpc();
-
-    const currentBlock = await this.provider.getBlockNumber();
-    const fromBlock = this.startBlock;
-
-    console.log(`[IdentitySync] Scanning blocks ${fromBlock}–${currentBlock} (~${((currentBlock - fromBlock) / 1000).toFixed(0)}k blocks)`);
-
-    // Use the Registered event — specific to ERC-8004, much more efficient than Transfer
-    const registeredFilter = this.identity.filters.Registered();
-
-    const CHUNK_SIZE = 50_000;
-    const DELAY_MS = 350;
-    const allEvents: ethers.EventLog[] = [];
-
-    const totalChunks = Math.ceil((currentBlock - fromBlock) / CHUNK_SIZE);
-    let chunkIdx = 0;
-    let consecutiveFailures = 0;
-
-    for (let from = fromBlock; from <= currentBlock; from += CHUNK_SIZE) {
-      const to = Math.min(from + CHUNK_SIZE - 1, currentBlock);
-      chunkIdx++;
-      let success = false;
-
-      // Try current provider first, then cycle through fallbacks
-      for (let rpcAttempt = 0; rpcAttempt < this.rpcUrls.length && !success; rpcAttempt++) {
-        let retries = 2;
-        while (retries > 0 && !success) {
-          try {
-            const events = await this.identity.queryFilter(registeredFilter, from, to);
-            for (const e of events) {
-              if (e instanceof ethers.EventLog) {
-                allEvents.push(e);
-              }
-            }
-            success = true;
-            consecutiveFailures = 0;
-          } catch (err: any) {
-            retries--;
-            if (retries > 0) {
-              await sleep(DELAY_MS * 2);
-            }
-          }
-        }
-
-        // If retries exhausted on current RPC, try next one
-        if (!success && rpcAttempt < this.rpcUrls.length - 1) {
-          const nextUrl = this.rpcUrls[rpcAttempt + 1];
-          console.warn(`[IdentitySync] Switching RPC → ${nextUrl.replace(/https?:\/\//, "").split("/")[0]}`);
-          this.setProvider(new ethers.JsonRpcProvider(nextUrl));
-        }
-      }
-
-      if (!success) {
-        consecutiveFailures++;
-        console.warn(`[IdentitySync] Chunk ${chunkIdx}/${totalChunks} failed on ALL RPCs, skipping range ${from}–${to}`);
-        if (consecutiveFailures >= 5) {
-          console.error(`[IdentitySync] ${consecutiveFailures} consecutive chunk failures — aborting scan.`);
-          break;
-        }
-      }
-
-      // Log progress every 10 chunks
-      if (chunkIdx % 10 === 0 || chunkIdx === totalChunks) {
-        console.log(`[IdentitySync] Progress: ${chunkIdx}/${totalChunks} chunks, ${allEvents.length} Registered events found`);
-      }
-
-      // Throttle between chunks
-      if (chunkIdx < totalChunks) await sleep(DELAY_MS);
-    }
-
-    console.log(`[IdentitySync] Scan complete — found ${allEvents.length} Registered events.`);
-
-    let synced = 0;
-    for (const event of allEvents) {
-      // Registered(uint256 indexed agentId, string agentURI, address indexed owner)
-      const agentId = event.args[0].toString();
-      const agentURI = event.args[1] as string;
-      const owner = event.args[2] as string;
-
-      // Skip if already in DB
-      const existing = this.db
-        .prepare("SELECT agent_id FROM agents WHERE agent_id = ?")
-        .get(agentId);
-      if (existing) continue;
-
-      try {
-        const agent = await this.fetchAgentData(agentId, owner, agentURI);
-        if (agent) {
-          this.upsertAgent(agent);
-          synced++;
-          console.log(`[IdentitySync] Synced agent #${agentId}: ${agent.name} (caps: ${agent.capabilities.join(", ") || "none"})`);
-        } else {
-          console.warn(`[IdentitySync] Agent #${agentId}: metadata could not be resolved`);
-        }
-      } catch (err: any) {
-        console.warn(`[IdentitySync] Failed to sync agent #${agentId}:`, err.message);
-      }
-
-      // Throttle metadata fetches to respect rate limits
-      await sleep(500);
-    }
-
-    console.log(`[IdentitySync] Done — synced ${synced} new agents (${allEvents.length} total on-chain).`);
-    return synced;
-  }
-
-  /**
-   * Fetch agent metadata. Uses the URI from the Registered event directly
-   * (avoids an extra RPC call to tokenURI).
-   */
   private async fetchAgentData(agentId: string, owner: string, eventUri?: string) {
-    // Prefer the URI from the event, fall back to on-chain tokenURI
     let uri = eventUri || "";
     if (!uri) {
       try {
@@ -205,21 +298,19 @@ export class IdentitySync {
       return null;
     }
 
-    // Flexible name extraction — different agents use different fields
     const name = metadata.name || metadata.agentName || metadata.title || `Agent #${agentId}`;
 
-    // Get on-chain reputation
+    // On-chain reputation (still needs RPC — not in subgraph)
     let repScore = 0;
     let repCount = 0;
     try {
       const summary = await this.reputation.getSummary(agentId);
-      repScore = Number(summary.averageValue); // e.g. 482 = 4.82
+      repScore = Number(summary.averageValue);
       repCount = Number(summary.feedbackCount);
     } catch {
       // No reputation data yet
     }
 
-    // Flexible capability extraction
     const capabilities =
       metadata.capabilities ||
       metadata.services?.map((s: any) => s.name || s.type) ||
@@ -227,13 +318,11 @@ export class IdentitySync {
       metadata.tags ||
       [];
 
-    // Flexible price extraction
     const basePrice = parseInt(
       metadata.pricing?.base || metadata.basePrice || metadata.price || "0",
       10,
     );
 
-    // Flexible endpoint extraction
     const endpoint =
       metadata.endpoint ||
       metadata.services?.[0]?.endpoint ||
@@ -257,13 +346,11 @@ export class IdentitySync {
 
   private async resolveMetadata(uri: string): Promise<any> {
     try {
-      // Handle data URIs (base64 encoded JSON)
       if (uri.startsWith("data:application/json;base64,")) {
         const base64 = uri.replace("data:application/json;base64,", "");
         return JSON.parse(Buffer.from(base64, "base64").toString("utf-8"));
       }
 
-      // Handle IPFS URIs
       if (uri.startsWith("ipfs://")) {
         const cid = uri.replace("ipfs://", "");
         const res = await fetch(`https://gateway.pinata.cloud/ipfs/${cid}`, { signal: AbortSignal.timeout(10_000) });
@@ -275,7 +362,6 @@ export class IdentitySync {
         return res.json();
       }
 
-      // Handle HTTP URIs
       if (uri.startsWith("http")) {
         const res = await fetch(uri, { signal: AbortSignal.timeout(10_000) });
         if (!res.ok) return null;
@@ -298,7 +384,6 @@ export class IdentitySync {
     wallet: string;
     ipfsUri: string;
   }) {
-    // Handle potential name conflicts with existing seed agents
     let name = agent.name;
     const nameConflict = this.db
       .prepare("SELECT agent_id FROM agents WHERE name = ? AND agent_id != ?")
@@ -332,4 +417,15 @@ export class IdentitySync {
         agent.ipfsUri,
       );
   }
+}
+
+// ─── Types ───────────────────────────────────────────────────────────
+
+interface SubgraphAgent {
+  agentId: string;
+  owner: string;
+  agentURI: string;
+  blockNumber: string;
+  registeredAt: string;
+  txHash: string;
 }
