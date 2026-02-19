@@ -117,4 +117,11 @@ function runMigrations(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_agents_capabilities ON agents(capabilities);
     CREATE INDEX IF NOT EXISTS idx_agents_name ON agents(name);
   `);
+
+  // Migration: add source column for existing databases
+  try {
+    database.exec(`ALTER TABLE agents ADD COLUMN source TEXT NOT NULL DEFAULT 'seed'`);
+  } catch {
+    // Column already exists
+  }
 }

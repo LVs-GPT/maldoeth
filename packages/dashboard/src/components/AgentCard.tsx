@@ -14,6 +14,7 @@ interface AgentProps {
   name: string;
   capabilities: string[];
   basePrice: number;
+  source?: string;
   reputation?: AgentReputation;
 }
 
@@ -84,9 +85,16 @@ export function AgentCard({ agent }: { agent: AgentProps }) {
     >
       {/* Header: name + score */}
       <div className="mb-1 flex items-start justify-between">
-        <h3 className="text-[13px] font-bold text-[var(--foreground)] group-hover:text-[var(--green)] transition-colors">
-          {agent.name}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-[13px] font-bold text-[var(--foreground)] group-hover:text-[var(--green)] transition-colors">
+            {agent.name}
+          </h3>
+          {agent.source === "chain" && (
+            <span className="tag border-[rgba(68,136,255,0.3)] text-[var(--blue)] !text-[8px] !py-0 !px-1.5">
+              on-chain
+            </span>
+          )}
+        </div>
         <div className="text-right">
           <span className={`text-lg font-bold tabular-nums ${scoreColor}`}>
             {score > 0 ? score.toFixed(1) : "\u2014"}

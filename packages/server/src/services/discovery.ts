@@ -61,6 +61,7 @@ interface AgentRow {
   base_price: number;
   endpoint: string;
   wallet: string;
+  source: string;
   created_at: string;
 }
 
@@ -71,7 +72,7 @@ export class DiscoveryService {
   ) {}
 
   async discover(params: DiscoverParams) {
-    const limit = Math.min(params.limit ?? 10, 50);
+    const limit = Math.min(params.limit ?? 50, 100);
 
     // Query agents from DB
     let rows: AgentRow[];
@@ -118,6 +119,7 @@ export class DiscoveryService {
           capabilities: JSON.parse(row.capabilities),
           basePrice: row.base_price,
           endpoint: row.endpoint,
+          source: row.source || "seed",
           reputation: {
             score: rep.score,
             reviewCount: rep.reviewCount,
