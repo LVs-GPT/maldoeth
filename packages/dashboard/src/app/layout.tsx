@@ -51,9 +51,7 @@ export default function RootLayout({
                     <a href="https://kleros.io" target="_blank" rel="noopener" className="text-[var(--mid)] hover:text-[var(--foreground)] transition-colors underline decoration-[var(--dim)]">Kleros</a>
                   </span>
                 </div>
-                <div className="flex gap-6 flex-wrap">
-                  <a href="https://github.com/LVs-GPT/maldoeth" target="_blank" rel="noopener" className="text-xs text-[var(--mid)] hover:text-[var(--foreground)] transition-colors">GitHub</a>
-                </div>
+                <a href="https://github.com/LVs-GPT/maldoeth" target="_blank" rel="noopener" className="text-xs text-[var(--mid)] hover:text-[var(--foreground)] transition-colors">GitHub</a>
               </div>
             </div>
           </footer>
