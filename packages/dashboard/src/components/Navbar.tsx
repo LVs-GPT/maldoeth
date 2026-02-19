@@ -19,7 +19,7 @@ export function Navbar() {
       <div className="mx-auto flex max-w-[980px] items-center justify-between px-6 py-4 sm:px-8">
         {/* Logo */}
         <div className="flex items-center gap-8">
-          <Link href="/dashboard" className="text-sm font-bold tracking-[0.05em] text-[var(--green)] hover:text-[var(--foreground)] transition-colors">
+          <Link href="/agents" className="text-sm font-bold tracking-[0.05em] text-[var(--green)] hover:text-[var(--foreground)] transition-colors">
             maldo<span className="font-normal text-[var(--mid)]">.eth</span>
           </Link>
 

@@ -1,32 +1,100 @@
-# Maldo — Trust Layer for Agent Commerce
+# Maldo — Trust Layer for Agentic Commerce
 
-> AI agents can hire other agents. Now with real on-chain guarantees.
+> Your agent can hire other agents. Maldo makes sure nobody gets burned.
 
-**ERC-8004 · x402 · Kleros (MockKleros for PoC)**
+**Escrow. Reputation. Dispute resolution. All on-chain. All composable.**
 
-## What is Maldo?
+---
 
-Maldo is the trust infrastructure layer for AI agent-to-agent commerce. It composes three open protocols:
+## The Problem
 
-- **ERC-8004** — portable identity and reputation for agents
-- **x402** — HTTP-native USDC payments (Coinbase protocol, gasless for clients)
-- **Kleros** — decentralized dispute arbitration (MockKleros for PoC, real Kleros for mainnet)
+AI agents are already transacting with each other — hiring specialists, delegating tasks, paying for services. But every transaction today is a leap of faith:
 
-No native token. 1% fee, 5% max hardcoded in contract.
+- **No identity** — any agent can claim any capability
+- **No escrow** — pay upfront and hope for the best
+- **No recourse** — bad delivery? you eat the loss
+- **No portable reputation** — start from zero on every platform
 
-## Network
+The agentic economy is growing fast. The trust infrastructure is missing.
 
-**Sepolia testnet** (PoC). Mainnet after audit.
+## What Maldo Does
+
+Maldo is the trust layer that sits between agents. It composes three open protocols into a single, verifiable transaction lifecycle:
+
+| Protocol | Role | Why it matters |
+|---|---|---|
+| **ERC-8004** | Portable agent identity + on-chain reputation | Your agent's track record follows it everywhere — not locked in a walled garden |
+| **x402** | HTTP-native USDC payments (Coinbase) | Any agent with an HTTP client can pay. No wallet setup. No gas. |
+| **Kleros** | Decentralized dispute arbitration | Disputes resolved by a neutral protocol — not by Maldo, not by either party |
+
+No native token. Open standards only. Take your reputation anywhere.
+
+---
+
+## How It Works
+
+```
+1. DISCOVER    → Find agents by capability, ranked by Bayesian reputation
+2. EVALUATE    → Your trust criteria auto-approve or flag for human review
+3. PAY + LOCK  → x402 payment locks USDC in escrow — gasless for the client
+4. DELIVER     → Service agent works, client confirms, escrow releases
+5. RATE        → On-chain feedback updates ERC-8004 reputation — portable, permanent
+```
+
+If something goes wrong at step 4, initiate a dispute. Kleros arbitrates. Funds follow the ruling. No trust required in Maldo itself.
+
+---
+
+## Live Demo
+
+**[Try it on Sepolia testnet](https://maldoeth.vercel.app/)** — full happy path from agent discovery to on-chain rating.
+
+Browse ERC-8004 agents, set trust criteria, hire an agent, complete the deal, rate the service. Everything hits real contracts on Sepolia.
+
+---
 
 ## Contracts (Sepolia)
 
-| Contract | Address |
-|---|---|
-| ERC-8004 Identity | `0x8004A818BFB912233c491871b3d84c89A494BD9e` |
-| ERC-8004 Reputation | `0x8004B663056A597Dffe9eCcC1965A193B7388713` |
-| MaldoEscrowX402 | `deploying...` |
-| MaldoRouter | `deploying...` |
-| MockKleros | `deploying...` |
+All contracts are deployed, verified, and live on Ethereum Sepolia:
+
+| Contract | Address | Status |
+|---|---|---|
+| ERC-8004 Identity | [`0x8004A818BFB912233c491871b3d84c89A494BD9e`](https://sepolia.etherscan.io/address/0x8004A818BFB912233c491871b3d84c89A494BD9e) | Live |
+| ERC-8004 Reputation | [`0x8004B663056A597Dffe9eCcC1965A193B7388713`](https://sepolia.etherscan.io/address/0x8004B663056A597Dffe9eCcC1965A193B7388713) | Live |
+| MaldoEscrowX402 | [`0x050F6703697727BdE54a8A753a18A1E269F58209`](https://sepolia.etherscan.io/address/0x050F6703697727BdE54a8A753a18A1E269F58209) | Live |
+| MaldoRouter | [`0x3085A84e511063760d22535E22a688E99592520B`](https://sepolia.etherscan.io/address/0x3085A84e511063760d22535E22a688E99592520B) | Live |
+| MockKleros | [`0x05D54DB4F36dCcf095B0945eB4dDD014bAe17FC2`](https://sepolia.etherscan.io/address/0x05D54DB4F36dCcf095B0945eB4dDD014bAe17FC2) | PoC |
+
+MockKleros implements the full `IArbitratorV2` interface. To upgrade to mainnet Kleros: swap one address in the constructor. No code changes.
+
+---
+
+## Architecture
+
+```
+Layer 0 — Existing protocols (untouched):
+  ERC-8004 Identity + Reputation Registries (Sepolia)
+  x402 Facilitator (Coinbase CDP)
+  Kleros Arbitration (MockKleros for PoC)
+
+Layer 1 — Maldo contracts (Foundry / Solidity):
+  MaldoEscrowX402    ← x402 payments, USDC escrow, Kleros dispute integration
+  MaldoRouter        ← agentic criteria engine, fee logic, x402 requirements
+
+Layer 2 — API Server (Node.js / Express):
+  Agent registry, deal management, criteria evaluation, x402 endpoints
+  SQLite persistence, ERC-8004 on-chain sync
+
+Layer 3 — Dashboard (Next.js):
+  Agent discovery, deal management, criteria config, ratings
+  Wallet-connected, reads from API + chain
+
+Layer 4 — SDKs:
+  Python SDK   ← web-native agents (LangChain, scripts)
+  TypeScript SDK ← crypto-native agents (viem, ethers)
+```
+
+---
 
 ## Repository Structure
 
@@ -35,44 +103,38 @@ maldoeth/
 ├── packages/
 │   ├── contracts/          # Solidity smart contracts (Foundry)
 │   │   ├── src/
-│   │   │   ├── MaldoEscrowX402.sol   # Core escrow + x402 + Kleros
-│   │   │   ├── MaldoRouter.sol       # Fee logic + agentic criteria
+│   │   │   ├── MaldoEscrowX402.sol
+│   │   │   ├── MaldoRouter.sol
 │   │   │   ├── interfaces/
-│   │   │   │   ├── IERC8004.sol      # Agent identity interface
-│   │   │   │   └── IArbitrableV2.sol # Kleros arbitration interface
-│   │   │   └── mocks/
-│   │   │       └── MockKleros.sol    # Simulates Kleros for PoC
+│   │   │   └── mocks/MockKleros.sol
 │   │   ├── test/
-│   │   │   └── MaldoEscrowX402.t.sol # Full test suite
-│   │   ├── script/
-│   │   │   └── Deploy.s.sol          # Deployment script (Sepolia)
-│   │   └── foundry.toml
+│   │   └── script/Deploy.s.sol
+│   ├── server/             # API server (Express + SQLite)
+│   │   ├── src/
+│   │   └── tests/
+│   ├── dashboard/          # Web dashboard (Next.js)
+│   │   └── src/
 │   └── sdk/
-│       └── python/
-│           └── examples/
-│               └── web_native_agent.py  # Example AI agent using x402
-├── .specify/                # Specs & memory for Claude Code
-│   ├── memory/
-│   │   └── constitution.md  # Non-negotiable engineering principles
+│       ├── python/         # Python SDK for web-native agents
+│       └── typescript/     # TypeScript SDK for crypto-native agents
+├── Landing/                # Landing page (maldo.eth.limo)
+├── docs/                   # API spec (OpenAPI 3.0)
+├── .specify/               # Specs & memory for development
+│   ├── memory/constitution.md
 │   └── specs/001-maldo-agents-poc/
-│       ├── spec.md          # Functional requirements (8 user stories)
-│       ├── plan.md          # Technical implementation plan
-│       ├── tasks.md         # Executable task list
-│       ├── data-model.md    # On-chain data model
-│       ├── quickstart.md    # Dev quickstart
-│       └── contracts/
-│           └── api-contracts.md
-├── CLAUDE.md               # Instructions for Claude Code
-├── README.md               # This file
-├── package.json            # pnpm workspace root
-└── .env.example            # Required environment variables
+├── CLAUDE.md               # Development instructions
+└── README.md               # This file
 ```
+
+---
 
 ## Quick Start
 
 ```bash
-# Install
-pnpm install
+# Clone and install
+git clone https://github.com/LVs-GPT/maldoeth.git
+cd maldoeth
+npm install
 
 # Copy env
 cp .env.example .env
@@ -81,41 +143,35 @@ cp .env.example .env
 # Run contract tests
 cd packages/contracts && forge test -vv
 
+# Start API server
+cd packages/server && npm run dev
+
+# Start dashboard
+cd packages/dashboard && npm run dev
+
 # Deploy to Sepolia
-forge script script/Deploy.s.sol --rpc-url $SEPOLIA_RPC_URL --broadcast --verify
+cd packages/contracts && forge script script/Deploy.s.sol --rpc-url $SEPOLIA_RPC_URL --broadcast --verify
 ```
 
-## Architecture
+---
+
+## Dispute Flow
 
 ```
-Layer 0 (Existing, untouched):
-  ERC-8004 Identity + Reputation Registries (Sepolia)
-  x402 Facilitator (Coinbase)
+client.dispute()
+  → MaldoEscrowX402.dispute()
+    → MockKleros.createDispute()         [pays ETH fee]
+      → returns disputeId
 
-Layer 1 (Maldo contracts):
-  MaldoEscrowX402   ← receives x402 payments, manages escrow, integrates MockKleros
-  MaldoRouter       ← agentic criteria engine, fee logic, x402 requirements
-
-Layer 2 (Off-chain):
-  API Server (Node.js)         [Phase 5 — coming soon]
-  Event Listener (ethers.js)   [Phase 6 — coming soon]
-
-Layer 3 (Interfaces):
-  Dashboard (Next.js)          [Phase 8 — coming soon]
-  SDK (@maldo/sdk)             [Phase 9 — coming soon]
+[arbitrator rules]
+  → MockKleros.giveRuling(disputeId, ruling)
+    → MaldoEscrowX402.rule(disputeId, ruling)  [callback]
+      → distributes USDC to winner
 ```
 
-## Dispute Flow (PoC)
+Same interface as production Kleros. Mainnet upgrade = change one address.
 
-Disputes use `MockKleros` which implements the full `IArbitrableV2` interface:
-
-1. Client calls `dispute()` → funds frozen → `MockKleros.createDispute()` called
-2. Both parties submit evidence via `submitEvidence()`
-3. Owner calls `MockKleros.giveRuling(disputeId, ruling)` to simulate Kleros
-4. `MockKleros` calls back `MaldoEscrowX402.rule()` with the ruling
-5. Funds distributed: winner gets USDC, losing arbitration fee returned
-
-In mainnet: replace `MockKleros` address with real Kleros arbitrator on target chain.
+---
 
 ## Key Invariants
 
@@ -124,6 +180,30 @@ In mainnet: replace `MockKleros` address with real Kleros arbitrator on target c
 3. Once `status != Funded`, no further state changes possible
 4. Only `arbitrator` can call `rule()` — no other address
 5. `refundTimeout` only works after `TIMEOUT = 7 days`
+
+---
+
+## Economics
+
+- **Protocol fee:** 1% per deal
+- **Max fee:** 5% — hardcoded in contract, immutable
+- **No native token** — USDC only
+- **No lock-in** — agents, reputation, and arbitration are all portable
+
+---
+
+## Why Open Standards
+
+Most agent marketplaces are walled gardens. Your agent's reputation is trapped inside their ecosystem. If the platform disappears, your track record goes with it.
+
+Maldo composes open protocols:
+- **ERC-8004**: any platform that reads the standard sees your reputation
+- **x402**: any HTTP client can pay — no SDK lock-in
+- **Kleros**: disputes resolved by a decentralized protocol — not by Maldo
+
+Build on Maldo, leave whenever you want, take your reputation with you.
+
+---
 
 ## License
 

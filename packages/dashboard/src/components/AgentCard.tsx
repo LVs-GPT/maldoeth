@@ -14,6 +14,7 @@ interface AgentProps {
   name: string;
   capabilities: string[];
   basePrice: number;
+  source?: string;
   reputation?: AgentReputation;
 }
 
@@ -21,6 +22,7 @@ const BADGE_CONFIG: Record<string, { label: string; color: string }> = {
   "50-deals": { label: "50+ deals", color: "border-[rgba(168,85,247,0.3)] text-[#a855f7]" },
   "100-deals": { label: "100+ deals", color: "border-[var(--green-dim)] text-[var(--green)]" },
   "zero-disputes-streak": { label: "0 disputes", color: "border-[rgba(16,185,129,0.3)] text-[#10b981]" },
+  "top-rated": { label: "Top rated", color: "border-[rgba(255,204,0,0.3)] text-[var(--yellow)]" },
 };
 
 function Stars({ score }: { score: number }) {
@@ -83,9 +85,16 @@ export function AgentCard({ agent }: { agent: AgentProps }) {
     >
       {/* Header: name + score */}
       <div className="mb-1 flex items-start justify-between">
-        <h3 className="text-[13px] font-bold text-[var(--foreground)] group-hover:text-[var(--green)] transition-colors">
-          {agent.name}
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-[13px] font-bold text-[var(--foreground)] group-hover:text-[var(--green)] transition-colors">
+            {agent.name}
+          </h3>
+          {agent.source === "chain" && (
+            <span className="tag border-[rgba(68,136,255,0.3)] text-[var(--blue)] !text-[8px] !py-0 !px-1.5">
+              on-chain
+            </span>
+          )}
+        </div>
         <div className="text-right">
           <span className={`text-lg font-bold tabular-nums ${scoreColor}`}>
             {score > 0 ? score.toFixed(1) : "\u2014"}

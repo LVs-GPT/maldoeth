@@ -10,7 +10,8 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * Scans Transfer events from the Identity Registry to discover all minted agents,
  * then fetches their tokenURI metadata and on-chain reputation.
  *
- * Only scans the last LOOKBACK_BLOCKS (~3 days on Sepolia at 12s/block).
+ * Default lookback: 500,000 blocks (~70 days on Sepolia at 12s/block).
+ * Override via IDENTITY_LOOKBACK_BLOCKS env var.
  * Includes rate-limit backoff for Infura free tier.
  */
 export class IdentitySync {
@@ -18,18 +19,18 @@ export class IdentitySync {
   private identity: ethers.Contract;
   private reputation: ethers.Contract;
 
-  /** How many blocks back to scan (default ~3 days) */
+  /** How many blocks back to scan */
   private lookback: number;
 
   constructor(
     private db: Database.Database,
     provider?: ethers.JsonRpcProvider,
-    lookback = 20_000,
+    lookback?: number,
   ) {
     this.provider = provider ?? new ethers.JsonRpcProvider(config.sepoliaRpcUrl);
     this.identity = new ethers.Contract(config.identityRegistry, ERC8004_IDENTITY_ABI, this.provider);
     this.reputation = new ethers.Contract(config.reputationRegistry, ERC8004_REPUTATION_ABI, this.provider);
-    this.lookback = lookback;
+    this.lookback = lookback ?? parseInt(process.env.IDENTITY_LOOKBACK_BLOCKS || "500000", 10);
   }
 
   async sync(): Promise<number> {
@@ -39,19 +40,23 @@ export class IdentitySync {
     const currentBlock = await this.provider.getBlockNumber();
     const fromBlock = Math.max(0, currentBlock - this.lookback);
 
-    console.log(`[IdentitySync] Scanning blocks ${fromBlock}–${currentBlock} (last ${this.lookback} blocks)`);
+    console.log(`[IdentitySync] Scanning blocks ${fromBlock}–${currentBlock} (${this.lookback} blocks lookback)`);
 
     // Scan Transfer events from address(0) = mints
     const mintFilter = this.identity.filters.Transfer(ethers.ZeroAddress);
 
-    // Use small chunks with generous delay to stay within Infura free-tier rate limits
-    const CHUNK_SIZE = 2_000;
-    const DELAY_MS = 1_500;
+    // Chunk size and delay tuned for Infura free tier
+    const CHUNK_SIZE = 5_000;
+    const DELAY_MS = 600;
     const allEvents: ethers.EventLog[] = [];
+
+    const totalChunks = Math.ceil((currentBlock - fromBlock) / CHUNK_SIZE);
+    let chunkIdx = 0;
 
     for (let from = fromBlock; from <= currentBlock; from += CHUNK_SIZE) {
       const to = Math.min(from + CHUNK_SIZE - 1, currentBlock);
-      let retries = 3;
+      chunkIdx++;
+      let retries = 4;
 
       while (retries > 0) {
         try {
@@ -65,20 +70,25 @@ export class IdentitySync {
         } catch {
           retries--;
           if (retries > 0) {
-            const backoff = DELAY_MS * (4 - retries);
-            console.warn(`[IdentitySync] Chunk ${from}–${to} rate limited, retrying in ${backoff}ms...`);
+            const backoff = DELAY_MS * (5 - retries);
+            console.warn(`[IdentitySync] Chunk ${chunkIdx}/${totalChunks} rate limited, retrying in ${backoff}ms...`);
             await sleep(backoff);
           } else {
-            console.warn(`[IdentitySync] Chunk ${from}–${to} failed after retries, skipping.`);
+            console.warn(`[IdentitySync] Chunk ${chunkIdx}/${totalChunks} failed after retries, skipping.`);
           }
         }
+      }
+
+      // Log progress every 20 chunks
+      if (chunkIdx % 20 === 0) {
+        console.log(`[IdentitySync] Progress: ${chunkIdx}/${totalChunks} chunks scanned, ${allEvents.length} mints found so far`);
       }
 
       // Throttle between chunks
       await sleep(DELAY_MS);
     }
 
-    console.log(`[IdentitySync] Found ${allEvents.length} mint events.`);
+    console.log(`[IdentitySync] Scan complete — found ${allEvents.length} mint events.`);
 
     let synced = 0;
     for (const event of allEvents) {
@@ -185,10 +195,19 @@ export class IdentitySync {
     wallet: string;
     ipfsUri: string;
   }) {
+    // Handle potential name conflicts with existing seed agents
+    let name = agent.name;
+    const nameConflict = this.db
+      .prepare("SELECT agent_id FROM agents WHERE name = ? AND agent_id != ?")
+      .get(name, agent.agentId);
+    if (nameConflict) {
+      name = `${agent.name} (#${agent.agentId.slice(0, 8)})`;
+    }
+
     this.db
       .prepare(
-        `INSERT INTO agents (agent_id, name, description, capabilities, base_price, endpoint, wallet, ipfs_uri)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO agents (agent_id, name, description, capabilities, base_price, endpoint, wallet, ipfs_uri, source)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'chain')
          ON CONFLICT(agent_id) DO UPDATE SET
            name = excluded.name,
            description = excluded.description,
@@ -196,11 +215,12 @@ export class IdentitySync {
            base_price = excluded.base_price,
            endpoint = excluded.endpoint,
            wallet = excluded.wallet,
-           ipfs_uri = excluded.ipfs_uri`,
+           ipfs_uri = excluded.ipfs_uri,
+           source = 'chain'`,
       )
       .run(
         agent.agentId,
-        agent.name,
+        name,
         agent.description,
         JSON.stringify(agent.capabilities),
         agent.basePrice,

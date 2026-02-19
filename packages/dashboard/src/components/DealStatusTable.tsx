@@ -75,7 +75,15 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
   return (
     <>
       <div className="border border-[var(--border)] overflow-hidden">
-        <table className="data-table">
+        <table className="data-table" style={{ tableLayout: "fixed" }}>
+          <colgroup>
+            <col style={{ width: "18%" }} />
+            <col style={{ width: "18%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "22%" }} />
+          </colgroup>
           <thead>
             <tr>
               <th>Nonce</th>

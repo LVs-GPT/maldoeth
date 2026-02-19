@@ -55,6 +55,24 @@ app.listen(config.port, () => {
       console.log("[IdentitySync] Server continues with local agents only.");
     });
 
+    // Manual re-sync endpoint
+    let syncing = false;
+    app.post("/api/v1/agents/sync", async (_req, res) => {
+      if (syncing) {
+        res.json({ status: "already_running", message: "Sync is already in progress" });
+        return;
+      }
+      syncing = true;
+      try {
+        const count = await identitySync.sync();
+        res.json({ status: "ok", synced: count });
+      } catch (err: any) {
+        res.status(500).json({ status: "error", error: err.message });
+      } finally {
+        syncing = false;
+      }
+    });
+
     // Start escrow event listener
     const listener = new EscrowEventListener(db);
     listener.start().catch((err) => {

@@ -10,6 +10,8 @@ const CAPABILITIES = [
   "translation",
   "data-collection",
   "financial-report",
+  "security-audit",
+  "oracle",
 ];
 
 export default function AgentsPage() {

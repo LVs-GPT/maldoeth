@@ -149,7 +149,8 @@ export class RatingService {
     const badges: string[] = [];
     if (reviewCount >= 50) badges.push("50-deals");
     if (reviewCount >= 100) badges.push("100-deals");
-    if (disputeRate === 0 && reviewCount >= 20) badges.push("zero-disputes-streak");
+    if (disputeRate === 0 && reviewCount >= 5) badges.push("zero-disputes-streak");
+    if (avgScore >= 4.5 && reviewCount >= 5) badges.push("top-rated");
 
     return {
       agentId,
