@@ -30,7 +30,11 @@ export function createApp(deps: AppDeps) {
 
   // Middleware
   app.use(helmet());
-  app.use(cors());
+  app.use(cors({
+    origin: config.corsOrigin === "*" ? true : config.corsOrigin.split(","),
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    credentials: true,
+  }));
   app.use(express.json());
   app.use(morgan("short"));
 

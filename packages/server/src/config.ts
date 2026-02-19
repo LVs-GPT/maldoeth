@@ -20,6 +20,9 @@ export const config = {
   // x402
   get x402FacilitatorUrl() { return process.env.X402_FACILITATOR_URL || "https://www.x402.org/facilitator"; },
 
+  // CORS — restrict in production, allow all in dev
+  get corsOrigin() { return process.env.CORS_ORIGIN || "*"; },
+
   // Database (SQLite for PoC)
   get dbPath() { return process.env.DB_PATH || "./maldo.db"; },
 };
