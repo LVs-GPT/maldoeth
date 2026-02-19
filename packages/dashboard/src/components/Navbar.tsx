@@ -81,8 +81,23 @@ export function Navbar() {
           )}
         </div>
 
-        {/* Mobile right side: guide + SEPOLIA + hamburger */}
+        {/* Mobile right side: sign-in + guide + SEPOLIA + hamburger */}
         <div className="flex md:hidden items-center gap-2">
+          {isConnected ? (
+            <button
+              onClick={() => logout()}
+              className="btn py-1 px-2.5 text-[10px] border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--green-dim)] hover:text-[var(--green)] transition-colors"
+            >
+              {address?.slice(0, 6)}&hellip;{address?.slice(-4)}
+            </button>
+          ) : (
+            <button
+              onClick={() => login()}
+              className="btn btn-primary py-1 px-3 text-[10px]"
+            >
+              Sign in
+            </button>
+          )}
           <TestGuide />
           <span className="tag border-[var(--green-dim)] text-[var(--green)] text-[9px] tracking-[0.1em]">
             <span className="status-dot bg-[var(--green)] status-dot-live mr-1" style={{ boxShadow: '0 0 6px var(--green)' }} />
@@ -136,23 +151,6 @@ export function Navbar() {
               );
             })}
 
-            <div className="border-t border-[var(--border)] mt-2 pt-3">
-              {isConnected ? (
-                <button
-                  onClick={() => { logout(); setMobileOpen(false); }}
-                  className="w-full btn py-2 px-3 text-xs border border-[var(--border)] text-[var(--foreground)] hover:border-[var(--green-dim)] hover:text-[var(--green)] transition-colors"
-                >
-                  {address?.slice(0, 6)}&hellip;{address?.slice(-4)} &mdash; Sign out
-                </button>
-              ) : (
-                <button
-                  onClick={() => { login(); setMobileOpen(false); }}
-                  className="w-full btn btn-primary py-2.5 px-3 text-xs"
-                >
-                  Sign in
-                </button>
-              )}
-            </div>
           </div>
         </div>
       )}

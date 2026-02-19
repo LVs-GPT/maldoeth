@@ -58,7 +58,7 @@ const FAQS = [
   },
 ];
 
-const API = "https://api.maldo.uy";
+const API = process.env.NEXT_PUBLIC_API_URL || "https://maldo-server.onrender.com";
 
 const API_EXAMPLES = [
   {
@@ -132,7 +132,7 @@ export function TestGuide() {
           onClick={(e) => e.target === e.currentTarget && setOpen(false)}
         >
           <div
-            className="w-full max-w-lg bg-[var(--surface)] border border-[var(--border)] p-5 sm:p-7 mx-4 animate-slideUp"
+            className="w-full max-w-2xl bg-[var(--surface)] border border-[var(--border)] p-5 sm:p-8 mx-4 animate-slideUp max-h-[85vh] overflow-y-auto"
             style={{
               boxShadow:
                 "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03)",
@@ -141,10 +141,10 @@ export function TestGuide() {
             {/* Header */}
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-base font-bold text-[var(--foreground)]">
+                <h2 className="text-lg font-bold text-[var(--foreground)]">
                   How to use Maldo
                 </h2>
-                <p className="mt-1 text-[11px] text-[var(--mid)]">
+                <p className="mt-1 text-xs text-[var(--mid)]">
                   Sepolia testnet demo — no real funds involved
                 </p>
               </div>
@@ -169,7 +169,7 @@ export function TestGuide() {
             <div className="flex gap-0 mb-6 border-b border-[var(--border)]">
               <button
                 onClick={() => setTab("guide")}
-                className={`px-3 pb-2 text-xs font-bold transition-colors border-b-2 -mb-px ${
+                className={`px-4 pb-2 text-sm font-bold transition-colors border-b-2 -mb-px ${
                   tab === "guide"
                     ? "border-[var(--green)] text-[var(--green)]"
                     : "border-transparent text-[var(--mid)] hover:text-[var(--foreground)]"
@@ -179,7 +179,7 @@ export function TestGuide() {
               </button>
               <button
                 onClick={() => setTab("api")}
-                className={`px-3 pb-2 text-xs font-bold transition-colors border-b-2 -mb-px ${
+                className={`px-4 pb-2 text-sm font-bold transition-colors border-b-2 -mb-px ${
                   tab === "api"
                     ? "border-[var(--green)] text-[var(--green)]"
                     : "border-transparent text-[var(--mid)] hover:text-[var(--foreground)]"
@@ -192,23 +192,23 @@ export function TestGuide() {
             {/* Guide tab */}
             {tab === "guide" && (
               <>
-                <p className="text-[11px] text-[var(--mid)] mb-5 leading-[1.7]">
+                <p className="text-sm text-[var(--mid)] mb-5 leading-relaxed">
                   This interface is for hands-on testing. Follow these 5 steps
                   to explore the full agent commerce flow.
                 </p>
 
                 {/* Steps */}
-                <div className="space-y-4 mb-8">
+                <div className="space-y-5 mb-8">
                   {STEPS.map((s) => (
                     <div key={s.step} className="flex gap-4">
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center border border-[var(--green-dim)] text-[var(--green)] text-xs font-bold">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center border border-[var(--green-dim)] text-[var(--green)] text-sm font-bold">
                         {s.step}
                       </div>
                       <div className="min-w-0">
-                        <h3 className="text-[13px] font-bold text-[var(--foreground)]">
+                        <h3 className="text-sm font-bold text-[var(--foreground)]">
                           {s.title}
                         </h3>
-                        <p className="mt-0.5 text-[11px] text-[var(--mid)] leading-[1.7]">
+                        <p className="mt-1 text-[13px] text-[var(--mid)] leading-relaxed">
                           {s.description}
                         </p>
                       </div>
@@ -224,10 +224,10 @@ export function TestGuide() {
                   <div className="space-y-4">
                     {FAQS.map((faq) => (
                       <div key={faq.q}>
-                        <h4 className="text-[12px] font-bold text-[var(--foreground)]">
+                        <h4 className="text-sm font-bold text-[var(--foreground)]">
                           {faq.q}
                         </h4>
-                        <p className="mt-0.5 text-[11px] text-[var(--mid)] leading-[1.7]">
+                        <p className="mt-1 text-[13px] text-[var(--mid)] leading-relaxed">
                           {faq.a}
                         </p>
                       </div>
@@ -240,28 +240,28 @@ export function TestGuide() {
             {/* API tab */}
             {tab === "api" && (
               <>
-                <p className="text-[11px] text-[var(--mid)] mb-5 leading-[1.7]">
+                <p className="text-sm text-[var(--mid)] mb-5 leading-relaxed">
                   For developers: test the full deal lifecycle via REST API.
                   No auth required.
                 </p>
-                <div className="text-[11px] text-[var(--dim)] mb-4">
+                <div className="text-sm text-[var(--dim)] mb-4">
                   Base URL:{" "}
-                  <span className="text-[var(--green)] font-bold">
+                  <span className="text-[var(--green)] font-bold break-all">
                     {API}
                   </span>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {API_EXAMPLES.map((ex) => (
                     <div key={ex.title}>
-                      <h4 className="text-[12px] font-bold text-[var(--foreground)] mb-1.5">
+                      <h4 className="text-sm font-bold text-[var(--foreground)] mb-2">
                         {ex.title}
                       </h4>
-                      <pre className="text-[10px] leading-[1.8] text-[var(--mid)] bg-[var(--bg)] border border-[var(--border)] p-3 overflow-x-auto whitespace-pre-wrap break-all">
+                      <pre className="text-xs leading-relaxed text-[var(--mid)] bg-[var(--bg)] border border-[var(--border)] p-3 overflow-x-auto whitespace-pre-wrap break-all">
                         {ex.curl}
                       </pre>
                       {ex.note && (
-                        <p className="mt-1 text-[10px] text-[var(--dim)]">
+                        <p className="mt-1.5 text-xs text-[var(--dim)]">
                           {ex.note}
                         </p>
                       )}
@@ -271,7 +271,7 @@ export function TestGuide() {
 
                 <hr className="section-rule my-6" />
 
-                <div className="text-[11px] text-[var(--mid)] leading-[1.7]">
+                <div className="text-sm text-[var(--mid)] leading-relaxed">
                   <span className="font-bold text-[var(--foreground)]">
                     Full flow:
                   </span>{" "}
