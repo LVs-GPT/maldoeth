@@ -18,7 +18,8 @@ export interface RegisterAgentResult {
 }
 
 export interface ChainAdapter {
-  mintIdentity(to: string, uri: string): Promise<{ tokenId: string; txHash: string }>;
+  /** Calls IdentityRegistry.register(agentURI) — mints ERC-8004 NFT to the signer */
+  registerAgent(agentURI: string): Promise<{ agentId: string; txHash: string }>;
 }
 
 /**
@@ -73,10 +74,10 @@ export class RegistrationService {
     let ipfsUri: string | null = null;
 
     if (this.chain) {
-      // For PoC: use metadata JSON as URI directly (real version would upload to IPFS first)
+      // For PoC: use metadata JSON as data URI (real version would upload to IPFS first)
       ipfsUri = `data:application/json;base64,${Buffer.from(metadataJson).toString("base64")}`;
-      const result = await this.chain.mintIdentity(params.wallet, ipfsUri);
-      agentId = result.tokenId;
+      const result = await this.chain.registerAgent(ipfsUri);
+      agentId = result.agentId;
       txHash = result.txHash;
     } else {
       // Offline mode: generate a deterministic agent ID

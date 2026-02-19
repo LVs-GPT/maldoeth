@@ -14,8 +14,10 @@ const DEFAULT_START_BLOCK = 9_980_000;
 
 /**
  * Syncs ERC-8004 Identity NFTs from Sepolia into the local agents table.
- * Scans Transfer events from the Identity Registry to discover all minted agents,
- * then fetches their tokenURI metadata and on-chain reputation.
+ *
+ * Scans `Registered(uint256 indexed agentId, string agentURI, address indexed owner)`
+ * events from the real ERC-8004 Identity Registry — much more targeted than
+ * generic ERC-721 Transfer events.
  *
  * Uses multi-RPC fallback: if the primary RPC fails, automatically tries
  * alternative public endpoints (Ankr, PublicNode, DRPC, etc.).
@@ -50,7 +52,6 @@ export class IdentitySync {
 
   /**
    * Try to get the current block number, cycling through fallback RPCs if needed.
-   * Returns the working provider index or throws if all fail.
    */
   private async findWorkingRpc(): Promise<void> {
     for (let i = 0; i < this.rpcUrls.length; i++) {
@@ -83,10 +84,9 @@ export class IdentitySync {
 
     console.log(`[IdentitySync] Scanning blocks ${fromBlock}–${currentBlock} (~${((currentBlock - fromBlock) / 1000).toFixed(0)}k blocks)`);
 
-    // Scan Transfer events from address(0) = mints
-    const mintFilter = this.identity.filters.Transfer(ethers.ZeroAddress);
+    // Use the Registered event — specific to ERC-8004, much more efficient than Transfer
+    const registeredFilter = this.identity.filters.Registered();
 
-    // Chunk size and delay tuned for free-tier RPCs
     const CHUNK_SIZE = 50_000;
     const DELAY_MS = 350;
     const allEvents: ethers.EventLog[] = [];
@@ -105,7 +105,7 @@ export class IdentitySync {
         let retries = 2;
         while (retries > 0 && !success) {
           try {
-            const events = await this.identity.queryFilter(mintFilter, from, to);
+            const events = await this.identity.queryFilter(registeredFilter, from, to);
             for (const e of events) {
               if (e instanceof ethers.EventLog) {
                 allEvents.push(e);
@@ -116,8 +116,7 @@ export class IdentitySync {
           } catch (err: any) {
             retries--;
             if (retries > 0) {
-              const backoff = DELAY_MS * 2;
-              await sleep(backoff);
+              await sleep(DELAY_MS * 2);
             }
           }
         }
@@ -133,7 +132,6 @@ export class IdentitySync {
       if (!success) {
         consecutiveFailures++;
         console.warn(`[IdentitySync] Chunk ${chunkIdx}/${totalChunks} failed on ALL RPCs, skipping range ${from}–${to}`);
-        // If too many consecutive failures, abort early
         if (consecutiveFailures >= 5) {
           console.error(`[IdentitySync] ${consecutiveFailures} consecutive chunk failures — aborting scan.`);
           break;
@@ -142,20 +140,21 @@ export class IdentitySync {
 
       // Log progress every 10 chunks
       if (chunkIdx % 10 === 0 || chunkIdx === totalChunks) {
-        console.log(`[IdentitySync] Progress: ${chunkIdx}/${totalChunks} chunks, ${allEvents.length} mints found`);
+        console.log(`[IdentitySync] Progress: ${chunkIdx}/${totalChunks} chunks, ${allEvents.length} Registered events found`);
       }
 
       // Throttle between chunks
       if (chunkIdx < totalChunks) await sleep(DELAY_MS);
     }
 
-    console.log(`[IdentitySync] Scan complete — found ${allEvents.length} mint events.`);
+    console.log(`[IdentitySync] Scan complete — found ${allEvents.length} Registered events.`);
 
     let synced = 0;
     for (const event of allEvents) {
-      const tokenId = event.args[2]; // Transfer(from, to, tokenId)
-      const owner = event.args[1];
-      const agentId = tokenId.toString();
+      // Registered(uint256 indexed agentId, string agentURI, address indexed owner)
+      const agentId = event.args[0].toString();
+      const agentURI = event.args[1] as string;
+      const owner = event.args[2] as string;
 
       // Skip if already in DB
       const existing = this.db
@@ -164,16 +163,16 @@ export class IdentitySync {
       if (existing) continue;
 
       try {
-        const agent = await this.fetchAgentData(agentId, owner);
+        const agent = await this.fetchAgentData(agentId, owner, agentURI);
         if (agent) {
           this.upsertAgent(agent);
           synced++;
           console.log(`[IdentitySync] Synced agent #${agentId}: ${agent.name} (caps: ${agent.capabilities.join(", ") || "none"})`);
         } else {
-          console.warn(`[IdentitySync] Token #${agentId}: metadata could not be resolved`);
+          console.warn(`[IdentitySync] Agent #${agentId}: metadata could not be resolved`);
         }
       } catch (err: any) {
-        console.warn(`[IdentitySync] Failed to sync token #${agentId}:`, err.message);
+        console.warn(`[IdentitySync] Failed to sync agent #${agentId}:`, err.message);
       }
 
       // Throttle metadata fetches to respect rate limits
@@ -184,17 +183,29 @@ export class IdentitySync {
     return synced;
   }
 
-  private async fetchAgentData(agentId: string, owner: string) {
-    // Get metadata from tokenURI
-    const uri: string = await this.identity.tokenURI(agentId);
+  /**
+   * Fetch agent metadata. Uses the URI from the Registered event directly
+   * (avoids an extra RPC call to tokenURI).
+   */
+  private async fetchAgentData(agentId: string, owner: string, eventUri?: string) {
+    // Prefer the URI from the event, fall back to on-chain tokenURI
+    let uri = eventUri || "";
+    if (!uri) {
+      try {
+        uri = await this.identity.tokenURI(agentId);
+      } catch {
+        return null;
+      }
+    }
+
     const metadata = await this.resolveMetadata(uri);
 
     if (!metadata) {
-      console.warn(`[IdentitySync] Token #${agentId}: could not resolve URI: ${uri.slice(0, 100)}`);
+      console.warn(`[IdentitySync] Agent #${agentId}: could not resolve URI: ${uri.slice(0, 100)}`);
       return null;
     }
 
-    // Flexible name extraction — different ERC-8004 implementations use different fields
+    // Flexible name extraction — different agents use different fields
     const name = metadata.name || metadata.agentName || metadata.title || `Agent #${agentId}`;
 
     // Get on-chain reputation
