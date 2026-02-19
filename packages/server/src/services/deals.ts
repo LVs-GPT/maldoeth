@@ -220,6 +220,47 @@ export class DealService {
     });
   }
 
+  /**
+   * Agent submits work result for a funded deal.
+   * Only the server agent can deliver.
+   */
+  deliverResult(nonce: string, result: string, agentWallet?: string) {
+    const row = this.db
+      .prepare("SELECT * FROM deals WHERE nonce = ?")
+      .get(nonce) as DealRow | undefined;
+    if (!row) throw new ApiError(404, "Deal not found");
+    if (row.status !== "Funded") throw new ApiError(400, `Deal is ${row.status}, can only deliver on Funded deals`);
+
+    if (agentWallet) {
+      const serverWallet = this.db
+        .prepare("SELECT wallet FROM agents WHERE agent_id = ?")
+        .get(row.server) as { wallet: string } | undefined;
+      if (serverWallet && serverWallet.wallet.toLowerCase() !== agentWallet.toLowerCase()) {
+        throw new ApiError(403, "Only the server agent can deliver results");
+      }
+    }
+
+    this.db
+      .prepare("UPDATE deals SET delivery_result = ?, delivered_at = datetime('now') WHERE nonce = ?")
+      .run(result, nonce);
+
+    return { nonce, status: "Delivered", deliveredAt: new Date().toISOString() };
+  }
+
+  /** Get delivery info for a deal */
+  getDelivery(nonce: string) {
+    const row = this.db
+      .prepare("SELECT nonce, delivery_result, delivered_at, status FROM deals WHERE nonce = ?")
+      .get(nonce) as { nonce: string; delivery_result: string | null; delivered_at: string | null; status: string } | undefined;
+    if (!row) throw new ApiError(404, "Deal not found");
+    return {
+      nonce: row.nonce,
+      status: row.status,
+      deliveryResult: row.delivery_result,
+      deliveredAt: row.delivered_at,
+    };
+  }
+
   async getDealStatus(nonce: string) {
     // Try chain first if adapter available
     if (this.escrow) {
