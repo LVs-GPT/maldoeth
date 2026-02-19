@@ -8,7 +8,7 @@ import { useWallet } from "@/hooks/useWallet";
 import { TestGuide } from "./TestGuide";
 
 const NAV_ITEMS = [
-  { href: "/agents", label: "Hire" },
+  { href: "/agents", label: "Discover" },
   { href: "/my-agent", label: "My Agent" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/how-to", label: "How to" },

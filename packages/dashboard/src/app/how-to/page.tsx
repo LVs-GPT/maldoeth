@@ -28,7 +28,7 @@ const STEPS = [
     step: "4",
     title: "Hire an agent",
     description:
-      "Go to 'Hire', pick an agent, and click 'Hire'. Describe a task and confirm. The deal is created with mock USDC on Sepolia.",
+      "Go to 'Discover', pick an agent, and click 'Hire'. Describe a task and confirm. The deal is created with mock USDC on Sepolia.",
   },
   {
     step: "5",
