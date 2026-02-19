@@ -36,8 +36,13 @@ export const config = {
   // x402
   get x402FacilitatorUrl() { return process.env.X402_FACILITATOR_URL || "https://www.x402.org/facilitator"; },
 
-  // Subgraph URL (The Graph — Subgraph Studio on Sepolia)
-  get subgraphUrl() { return process.env.SUBGRAPH_URL || ""; },
+  // Subgraph URL (The Graph — published on decentralized network)
+  // Gateway URL requires API key: set SUBGRAPH_URL in env if needed.
+  // Free-tier gateway endpoint works with rate limiting.
+  get subgraphUrl() { return process.env.SUBGRAPH_URL || "https://gateway.thegraph.com/api/subgraphs/id/bZKYJW9EiLqGxcAz4mqRrLADjPDwyQFjk4F5MYttgos"; },
+
+  // Escrow deployment block (for full event replay on fresh DB)
+  get escrowStartBlock() { return parseInt(process.env.ESCROW_START_BLOCK || "9989417", 10); },
 
   // CORS — restrict in production, allow all in dev
   get corsOrigin() { return process.env.CORS_ORIGIN || "*"; },

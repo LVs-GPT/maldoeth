@@ -85,17 +85,17 @@ export function AgentCard({ agent }: { agent: AgentProps }) {
     >
       {/* Header: name + score */}
       <div className="mb-1 flex items-start justify-between">
-        <div className="flex items-center gap-2 min-w-0">
+        <div className="min-w-0">
           <h3 className="text-[13px] font-bold text-[var(--foreground)] group-hover:text-[var(--green)] transition-colors truncate">
             {agent.name}
           </h3>
           {agent.source === "chain" && (
-            <span className="tag border-[rgba(68,136,255,0.3)] text-[var(--blue)] !text-[8px] !py-0 !px-1.5 shrink-0 whitespace-nowrap">
+            <span className="tag border-[rgba(68,136,255,0.3)] text-[var(--blue)] !text-[8px] !py-0 !px-1.5 mt-1 inline-block">
               on-chain
             </span>
           )}
         </div>
-        <div className="text-right">
+        <div className="text-right shrink-0 ml-2">
           <span className={`text-lg font-bold tabular-nums ${scoreColor}`}>
             {score > 0 ? score.toFixed(1) : "\u2014"}
           </span>

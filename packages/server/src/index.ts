@@ -103,13 +103,20 @@ app.listen(config.port, () => {
       });
   });
 
-  // GET endpoint to check sync status
+  // GET endpoint to check sync status + DB agent count (debugging)
   app.get("/api/v1/agents/sync/status", (_req, res) => {
+    const counts = db.prepare(
+      `SELECT COUNT(*) as total,
+              SUM(CASE WHEN source = 'chain' THEN 1 ELSE 0 END) as chain,
+              SUM(CASE WHEN source != 'chain' THEN 1 ELSE 0 END) as seed
+       FROM agents`,
+    ).get() as { total: number; chain: number; seed: number };
+
     if (syncing) {
       const elapsed = Math.round((Date.now() - syncStartedAt) / 1000);
-      res.json({ syncing: true, elapsed });
+      res.json({ syncing: true, elapsed, agents: counts });
     } else {
-      res.json({ syncing: false });
+      res.json({ syncing: false, agents: counts });
     }
   });
 

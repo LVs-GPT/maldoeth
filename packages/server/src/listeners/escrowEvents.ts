@@ -3,6 +3,8 @@ import type Database from "better-sqlite3";
 import { MALDO_ESCROW_ABI } from "../chain/abis.js";
 import { config } from "../config.js";
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export interface EventHandlers {
   onDealFunded?: (event: DealFundedEvent) => void | Promise<void>;
   onDealCompleted?: (event: DealCompletedEvent) => void | Promise<void>;
@@ -76,8 +78,14 @@ export class EscrowEventListener {
     console.log("[EventListener] Starting escrow event listener...");
     console.log(`[EventListener] Escrow: ${config.escrowAddress}`);
 
-    // Replay recent blocks on startup to catch missed events
-    await this.replayRecentBlocks(500);
+    // On fresh DB: full replay from escrow deploy block so deals survive redeploys.
+    // Otherwise: replay recent 500 blocks to catch missed events.
+    const dealsCount = (this.db.prepare("SELECT COUNT(*) as cnt FROM deals").get() as { cnt: number }).cnt;
+    if (dealsCount === 0) {
+      await this.replayAllEvents();
+    } else {
+      await this.replayRecentBlocks(500);
+    }
 
     // Subscribe to live events
     this.contract.on("DealFunded", async (nonce, dealId, client, server, amount, fee) => {
@@ -123,6 +131,82 @@ export class EscrowEventListener {
     this.running = false;
     await this.contract.removeAllListeners();
     console.log("[EventListener] Stopped.");
+  }
+
+  /**
+   * Full replay from escrow deployment block — used on fresh DB so deals survive redeploys.
+   * Chunks queries to stay within public RPC limits.
+   */
+  private async replayAllEvents(): Promise<void> {
+    try {
+      const fromBlock = config.escrowStartBlock;
+      const currentBlock = await this.provider.getBlockNumber();
+      const CHUNK = 50_000;
+      const totalChunks = Math.ceil((currentBlock - fromBlock) / CHUNK);
+
+      console.log(`[EventListener] Full replay from block ${fromBlock} to ${currentBlock} (~${totalChunks} chunks)...`);
+
+      const allEvents: ethers.EventLog[] = [];
+
+      for (let from = fromBlock; from <= currentBlock; from += CHUNK) {
+        const to = Math.min(from + CHUNK - 1, currentBlock);
+        try {
+          const [funded, completed, disputed, resolved, refunded] = await Promise.all([
+            this.contract.queryFilter(this.contract.filters.DealFunded(), from, to),
+            this.contract.queryFilter(this.contract.filters.DealCompleted(), from, to),
+            this.contract.queryFilter(this.contract.filters.DisputeInitiated(), from, to),
+            this.contract.queryFilter(this.contract.filters.DisputeResolved(), from, to),
+            this.contract.queryFilter(this.contract.filters.DealRefunded(), from, to),
+          ]);
+          for (const e of [...funded, ...completed, ...disputed, ...resolved, ...refunded]) {
+            if ("args" in e) allEvents.push(e as ethers.EventLog);
+          }
+        } catch (err) {
+          console.warn(`[EventListener] Chunk ${from}-${to} failed: ${(err as Error).message}`);
+        }
+        if (from + CHUNK <= currentBlock) await sleep(350);
+      }
+
+      allEvents.sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index);
+
+      for (const event of allEvents) {
+        if (!event.args) continue;
+        const name = event.eventName;
+        switch (name) {
+          case "DealFunded": {
+            const [nonce, dealId, client, server, amount] = event.args;
+            this.upsertDeal(nonce, Number(dealId), client, server, Number(amount), "Funded");
+            break;
+          }
+          case "DealCompleted": {
+            const [nonce] = event.args;
+            this.updateDealStatus(nonce, "Completed");
+            break;
+          }
+          case "DisputeInitiated": {
+            const [nonce] = event.args;
+            this.updateDealStatus(nonce, "Disputed");
+            break;
+          }
+          case "DisputeResolved": {
+            const [nonce] = event.args;
+            this.updateDealStatus(nonce, "Completed");
+            break;
+          }
+          case "DealRefunded": {
+            const [nonce] = event.args;
+            this.updateDealStatus(nonce, "Refunded");
+            break;
+          }
+        }
+      }
+
+      console.log(`[EventListener] Full replay done — recovered ${allEvents.length} events.`);
+    } catch (err) {
+      console.error("[EventListener] Full replay failed:", err);
+      // Fall back to recent blocks
+      await this.replayRecentBlocks(500);
+    }
   }
 
   private async replayRecentBlocks(blockCount: number): Promise<void> {

@@ -131,21 +131,37 @@ export class IdentitySync {
           .get(raw.agentId);
         if (existing) continue;
 
+        let agent: Awaited<ReturnType<typeof this.fetchAgentData>> = null;
         try {
-          const agent = await this.fetchAgentData(raw.agentId, raw.owner, raw.agentURI);
-          if (agent) {
-            this.upsertAgent(agent);
-            synced++;
-            console.log(`[IdentitySync] Synced agent #${raw.agentId}: ${agent.name}`);
-          } else {
-            console.warn(`[IdentitySync] Agent #${raw.agentId}: metadata could not be resolved`);
-          }
+          agent = await this.fetchAgentData(raw.agentId, raw.owner, raw.agentURI);
         } catch (err: any) {
-          console.warn(`[IdentitySync] Failed to sync agent #${raw.agentId}:`, err.message);
+          console.warn(`[IdentitySync] Metadata failed for #${raw.agentId}: ${err.message}`);
         }
 
-        // Throttle metadata fetches
-        await sleep(300);
+        // Always store the agent — use fallback data if metadata resolution failed
+        try {
+          this.upsertAgent(agent ?? {
+            agentId: raw.agentId,
+            name: `Agent #${raw.agentId}`,
+            description: "",
+            capabilities: [],
+            basePrice: 0,
+            endpoint: "",
+            wallet: (raw.owner || "").toLowerCase(),
+            ipfsUri: raw.agentURI || "",
+          });
+          synced++;
+        } catch (dbErr: any) {
+          console.warn(`[IdentitySync] DB insert failed for #${raw.agentId}: ${dbErr.message}`);
+        }
+
+        if (synced > 0 && synced % 100 === 0) {
+          console.log(`[IdentitySync] Progress: ${synced} new agents synced (${totalFetched} scanned)...`);
+        }
+
+        // Only throttle HTTP fetches (IPFS/HTTP URIs) — data: URIs are local
+        const needsHttp = raw.agentURI && !raw.agentURI.startsWith("data:");
+        if (needsHttp) await sleep(100);
       }
 
       // Done when page is smaller than PAGE_SIZE
@@ -241,18 +257,33 @@ export class IdentitySync {
         .get(agentId);
       if (existing) continue;
 
+      let agent: Awaited<ReturnType<typeof this.fetchAgentData>> = null;
       try {
-        const agent = await this.fetchAgentData(agentId, owner, agentURI);
-        if (agent) {
-          this.upsertAgent(agent);
-          synced++;
-          console.log(`[IdentitySync] Synced agent #${agentId}: ${agent.name}`);
-        }
+        agent = await this.fetchAgentData(agentId, owner, agentURI);
       } catch (err: any) {
-        console.warn(`[IdentitySync] Failed to sync agent #${agentId}:`, err.message);
+        console.warn(`[IdentitySync] Metadata failed for #${agentId}: ${err.message}`);
       }
 
-      await sleep(500);
+      // Always store — use fallback data if metadata resolution failed
+      try {
+        this.upsertAgent(agent ?? {
+          agentId,
+          name: `Agent #${agentId}`,
+          description: "",
+          capabilities: [],
+          basePrice: 0,
+          endpoint: "",
+          wallet: (owner || "").toLowerCase(),
+          ipfsUri: agentURI || "",
+        });
+        synced++;
+      } catch (dbErr: any) {
+        console.warn(`[IdentitySync] DB insert failed for #${agentId}: ${dbErr.message}`);
+      }
+
+      const needsHttp = agentURI && !agentURI.startsWith("data:");
+      if (needsHttp) await sleep(100);
+      else await sleep(50);
     }
 
     console.log(`[IdentitySync] Done — synced ${synced} new agents (${allEvents.length} total on-chain).`);
@@ -300,13 +331,18 @@ export class IdentitySync {
 
     const name = metadata.name || metadata.agentName || metadata.title || `Agent #${agentId}`;
 
-    // On-chain reputation (still needs RPC — not in subgraph)
+    // On-chain reputation — best-effort, don't block sync if RPC is slow
     let repScore = 0;
     let repCount = 0;
     try {
-      const summary = await this.reputation.getSummary(agentId);
-      repScore = Number(summary.averageValue);
-      repCount = Number(summary.feedbackCount);
+      const summary = await Promise.race([
+        this.reputation.getSummary(agentId),
+        sleep(3000).then(() => null), // 3s timeout
+      ]);
+      if (summary) {
+        repScore = Number(summary.averageValue);
+        repCount = Number(summary.feedbackCount);
+      }
     } catch {
       // No reputation data yet
     }

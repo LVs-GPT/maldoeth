@@ -16,6 +16,8 @@ services:
         sync: false
       - key: PRIVATE_KEY
         sync: false
+      - key: SUBGRAPH_URL
+        sync: false
       - key: USDC_SEPOLIA
         value: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238"
       - key: IDENTITY_REGISTRY

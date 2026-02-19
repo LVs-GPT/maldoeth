@@ -29,8 +29,11 @@ export default function AgentsPage() {
     setLoading(true);
     try {
       const data = await discoverAgents(cap);
-      setAgents(data.agents || []);
-    } catch {
+      const list = data.agents || [];
+      console.log(`[Discover] API returned ${list.length} agents (server count: ${data.count})`);
+      setAgents(list);
+    } catch (err) {
+      console.error("[Discover] Failed to load agents:", err);
       setAgents([]);
     } finally {
       setLoading(false);
