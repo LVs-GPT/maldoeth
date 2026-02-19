@@ -40,12 +40,10 @@ export function createServicesRouter(
     try {
       const capability = req.query.capability as string | undefined;
       const minRep = req.query.minRep ? parseFloat(req.query.minRep as string) : undefined;
-      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 100;
 
       const agents = await discovery.discover({
         capability,
         minReputation: minRep,
-        limit,
       });
 
       res.json({ agents });

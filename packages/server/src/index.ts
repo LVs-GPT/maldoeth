@@ -17,12 +17,15 @@ import { getDb } from "./db/index.js";
 import { EscrowEventListener } from "./listeners/escrowEvents.js";
 import { IdentitySync } from "./listeners/identitySync.js";
 import { config } from "./config.js";
-import { seedDemoData } from "./seed.js";
+import { isDbEmpty, seedDemoData } from "./seed.js";
 
 const db = getDb();
 
-// Seed demo agents (INSERT OR IGNORE — idempotent, safe to run every startup)
-seedDemoData(db);
+// Auto-seed demo data if database is empty (e.g. fresh Render deploy)
+if (isDbEmpty(db)) {
+  console.log("[Seed] Empty database detected, seeding demo data...");
+  seedDemoData(db);
+}
 
 const { app, webhookService } = createApp({ db });
 
