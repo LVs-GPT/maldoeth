@@ -143,7 +143,9 @@ export default function AgentsPage() {
           </div>
         ) : !loading ? (
           <div className="grid gap-px bg-[var(--border)] sm:grid-cols-2 lg:grid-cols-3">
-            {agents.map((agent: any) => (
+            {[...agents]
+              .sort((a, b) => (b.reputation?.bayesianScore ?? 0) - (a.reputation?.bayesianScore ?? 0))
+              .map((agent: any) => (
               <AgentCard key={agent.agentId} agent={agent} />
             ))}
           </div>
