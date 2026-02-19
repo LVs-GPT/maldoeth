@@ -9,6 +9,8 @@ import {
   setCriteria,
   listDeals,
 } from "@/lib/api";
+import { Spinner } from "@/components/Spinner";
+import { useToast } from "@/components/Toast";
 
 // ─── Criteria presets (same as before) ──────────────────────────────
 const PRESETS = [
@@ -164,6 +166,7 @@ function RegisterForm({ wallet, onRegistered }: { wallet: string; onRegistered: 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<any>(null);
+  const { toast } = useToast();
 
   const toggleCap = (cap: string) => {
     setCapabilities((prev) =>
@@ -194,9 +197,11 @@ function RegisterForm({ wallet, onRegistered }: { wallet: string; onRegistered: 
         wallet,
       });
       setSuccess(result);
+      toast("success", "Agent registered! Now visible in the marketplace.", result.txHash);
       setTimeout(() => onRegistered(), 1500);
     } catch (err: any) {
       setError(err.message || "Registration failed");
+      toast("error", err.message || "Registration failed");
     } finally {
       setSubmitting(false);
     }
@@ -358,7 +363,7 @@ function RegisterForm({ wallet, onRegistered }: { wallet: string; onRegistered: 
           disabled={submitting || !name.trim() || capabilities.length === 0}
           className="btn btn-primary w-full sm:w-auto"
         >
-          {submitting ? "Registering..." : "Register Agent"}
+          {submitting ? <><Spinner size={14} className="inline mr-1.5" />Registering&hellip;</> : "Register Agent"}
         </button>
       </form>
     </div>
@@ -451,6 +456,7 @@ function CriteriaTab({ address }: { address: string }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [criteriaData, setCriteriaData] = useState<any>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     getCriteria(address)
@@ -469,7 +475,10 @@ function CriteriaTab({ address }: { address: string }) {
       setCriteriaData(result);
       setCurrentPreset(preset);
       setSaved(true);
+      toast("success", `Criteria updated to "${preset}".`);
       setTimeout(() => setSaved(false), 2000);
+    } catch (err: any) {
+      toast("error", err.message || "Failed to save criteria");
     } finally {
       setSaving(false);
     }

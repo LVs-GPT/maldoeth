@@ -2,6 +2,7 @@
 
 import { PrivyProvider } from "@privy-io/react-auth";
 import { sepolia } from "viem/chains";
+import { ToastProvider } from "./Toast";
 
 const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID || "";
 
@@ -25,7 +26,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         supportedChains: [sepolia],
       }}
     >
-      {children}
+      <ToastProvider>{children}</ToastProvider>
     </PrivyProvider>
   );
 }
