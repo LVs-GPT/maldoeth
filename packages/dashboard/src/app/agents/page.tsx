@@ -63,10 +63,25 @@ export default function AgentsPage() {
     try {
       const data = await syncAgents();
       if (data.status === "already_running") {
-        setSyncResult("Sync already in progress...");
+        setSyncResult(data.message || "Sync already in progress...");
+      } else if (data.status === "started") {
+        setSyncResult("Sync started — refreshing in 30s...");
+        // Poll for new agents while sync runs in background
+        const poll = setInterval(async () => {
+          await loadAgents(activeFilter || undefined);
+        }, 10_000);
+        // Stop polling after 2 minutes
+        setTimeout(() => {
+          clearInterval(poll);
+          setSyncing(false);
+          setSyncResult(null);
+          loadAgents(activeFilter || undefined);
+        }, 120_000);
+        // Do an initial reload after 15s
+        setTimeout(() => loadAgents(activeFilter || undefined), 15_000);
+        return; // Don't setSyncing(false) yet
       } else {
         setSyncResult(`Synced ${data.synced} new agent${data.synced !== 1 ? "s" : ""} from Sepolia`);
-        // Reload agents after sync
         await loadAgents(activeFilter || undefined);
       }
     } catch (err: any) {
