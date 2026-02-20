@@ -82,6 +82,49 @@ MALDO_ESCROW_ADDRESS=0x050F6703697727BdE54a8A753a18A1E269F58209
 MALDO_ROUTER_ADDRESS=0x3085A84e511063760d22535E22a688E99592520B
 ```
 
+## Git Worktree Workflow
+
+This project uses git worktrees to work on different areas of the monorepo in parallel.
+Each worktree is a full checkout on its own feature branch, but only the relevant packages should be modified.
+
+| Worktree | Branch | Packages |
+|----------|--------|----------|
+| `wt/contracts` | `feat/contracts-audit` | `packages/contracts/` + `packages/subgraph/` |
+| `wt/server` | `feat/server-improvements` | `packages/server/` + `packages/sdk/` |
+| `wt/dashboard` | `feat/dashboard-cleanup` | `packages/dashboard/` |
+
+```
+/home/user/maldoeth/                              ← session branch (active dev)
+/home/user/maldoeth-worktrees/wt/contracts/       ← feat/contracts-audit
+/home/user/maldoeth-worktrees/wt/server/          ← feat/server-improvements
+/home/user/maldoeth-worktrees/wt/dashboard/       ← feat/dashboard-cleanup
+```
+
+**Common commands:**
+
+```bash
+# List all worktrees
+git worktree list
+
+# Work on contracts
+cd /home/user/maldoeth-worktrees/wt/contracts
+
+# Remove a worktree when done
+git worktree remove /home/user/maldoeth-worktrees/wt/contracts
+
+# Prune stale worktree references
+git worktree prune
+```
+
+**Branch flow:**
+```
+feat/* → develop → main (manual push only)
+```
+
+- Feature branches merge into `develop` via PR
+- `develop` merges into `main` manually from GitHub
+- Never push directly to `main`
+
 ## Key Invariants (must hold in all tests)
 
 1. `deal.fee + deal.amount == totalPaid` — no USDC is ever lost
