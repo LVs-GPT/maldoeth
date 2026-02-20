@@ -20,7 +20,11 @@ export default function DashboardPage() {
     id: number;
     status: string;
     agent_id: string;
+    agent_name: string;
     price_usdc: number;
+    task_description: string;
+    failed_checks: string;
+    created_at: string;
   }
   const [pendingApprovals, setPendingApprovals] = useState<ApprovalRow[]>([]);
   const [deals, setDeals] = useState<DealRow[]>([]);
