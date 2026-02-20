@@ -7,16 +7,49 @@ import { useWallet } from "@/hooks/useWallet";
 import { getAgent, getAgentReputation, getAgentRatings, getAgentVouches } from "@/lib/api";
 import { HireAgentModal } from "@/components/HireAgentModal";
 
+interface AgentData {
+  agentId: string;
+  name: string;
+  description: string;
+  capabilities: string[];
+  basePrice: number;
+  wallet: string;
+  endpoint: string;
+  createdAt: string;
+}
+
+interface ReputationData {
+  bayesianScore: number;
+  score: number;
+  reviewCount: number;
+  disputeRate: number;
+  badges: string[];
+}
+
+interface VouchData {
+  id: number;
+  voucher_name: string;
+  voucher_agent_id: string;
+  weight: number;
+}
+
+interface RatingData {
+  id: number;
+  score: number;
+  comment: string;
+  created_at: string;
+}
+
 export default function AgentProfilePage() {
   const params = useParams();
   const router = useRouter();
   const agentId = params.id as string;
   const { address, isConnected } = useWallet();
 
-  const [agent, setAgent] = useState<any>(null);
-  const [reputation, setReputation] = useState<any>(null);
-  const [ratings, setRatings] = useState<any[]>([]);
-  const [vouches, setVouches] = useState<any[]>([]);
+  const [agent, setAgent] = useState<AgentData | null>(null);
+  const [reputation, setReputation] = useState<ReputationData | null>(null);
+  const [ratings, setRatings] = useState<RatingData[]>([]);
+  const [vouches, setVouches] = useState<VouchData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showHireModal, setShowHireModal] = useState(false);
@@ -36,7 +69,7 @@ export default function AgentProfilePage() {
         setRatings(ratingsData.ratings || []);
         setVouches(vouchData.vouches || []);
       })
-      .catch((err) => setError(err.message))
+      .catch((err: unknown) => setError(err instanceof Error ? err.message : "Failed to load agent"))
       .finally(() => setLoading(false));
   }, [agentId]);
 
@@ -170,7 +203,7 @@ export default function AgentProfilePage() {
         <section>
           <div className="section-label">Vouches</div>
           <div className="flex flex-col gap-px bg-[var(--border)]">
-            {vouches.map((v: any) => (
+            {vouches.map((v) => (
               <div
                 key={v.id}
                 className="flex items-center justify-between bg-[var(--bg)] p-5 hover:bg-[var(--bg2)] transition-colors"
@@ -198,7 +231,7 @@ export default function AgentProfilePage() {
           <p className="text-xs text-[var(--mid)]">No ratings yet.</p>
         ) : (
           <div className="flex flex-col gap-px bg-[var(--border)]">
-            {ratings.slice(0, 10).map((rating: any) => (
+            {ratings.slice(0, 10).map((rating) => (
               <div
                 key={rating.id}
                 className="flex items-start justify-between bg-[var(--bg)] p-5 hover:bg-[var(--bg2)] transition-colors"

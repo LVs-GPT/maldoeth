@@ -116,6 +116,11 @@ contract MaldoEscrowX402Test is Test {
         new MaldoEscrowX402(address(usdc), address(kleros), facilitator, address(0), address(reputation));
     }
 
+    function test_constructor_zeroAddress_reputationRegistry() public {
+        vm.expectRevert(MaldoEscrowX402.ZeroAddress.selector);
+        new MaldoEscrowX402(address(usdc), address(kleros), facilitator, feeRecipient, address(0));
+    }
+
     // ─────────────────────────────────────────────
     // receivePayment tests
     // ─────────────────────────────────────────────
@@ -155,6 +160,18 @@ contract MaldoEscrowX402Test is Test {
         vm.expectRevert(MaldoEscrowX402.ZeroAmount.selector);
         vm.prank(facilitator);
         escrow.receivePayment(TEST_NONCE, client, server, 0);
+    }
+
+    function test_receivePayment_zeroAddress_client() public {
+        vm.expectRevert(MaldoEscrowX402.ZeroAddress.selector);
+        vm.prank(facilitator);
+        escrow.receivePayment(TEST_NONCE, address(0), server, DEAL_AMOUNT);
+    }
+
+    function test_receivePayment_zeroAddress_server() public {
+        vm.expectRevert(MaldoEscrowX402.ZeroAddress.selector);
+        vm.prank(facilitator);
+        escrow.receivePayment(TEST_NONCE, client, address(0), DEAL_AMOUNT);
     }
 
     function test_receivePayment_ghostDealPrevention() public {

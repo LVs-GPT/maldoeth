@@ -11,24 +11,24 @@ export function createServicesRouter(
 ): Router {
   const router = Router();
 
-  // POST /api/v1/services/register — auth required to prevent spam registration (B-NEW-2)
+  // POST /api/v1/services/register — auth required; uses authenticated wallet (not body-supplied)
   router.post("/register", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { name, description, capabilities, basePrice, endpoint, wallet } = req.body;
+      const { name, description, capabilities, basePrice, endpoint } = req.body;
 
       if (!name) throw new ApiError(400, "name is required");
       if (!capabilities || !Array.isArray(capabilities) || capabilities.length === 0) {
         throw new ApiError(400, "capabilities must be a non-empty array");
       }
-      if (!wallet) throw new ApiError(400, "wallet is required");
 
+      // Use authenticated wallet — prevents registering agents under another user's address
       const result = await registration.registerAgent({
         name,
         description: description || "",
         capabilities,
         basePrice: basePrice || 0,
         endpoint: endpoint || "",
-        wallet,
+        wallet: req.walletAddress!,
       });
 
       res.status(201).json(result);

@@ -8,12 +8,13 @@ import { config } from "../config.js";
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Check if an error is an Infura rate-limit */
-function isRateLimitError(err: any): boolean {
-  const msg = err?.message ?? "";
+function isRateLimitError(err: unknown): boolean {
+  const errObj = err as { message?: string; code?: number | string };
+  const msg = errObj?.message ?? "";
   return msg.includes("Too Many Requests")
     || msg.includes("missing response")
-    || err?.code === -32005
-    || err?.code === "BAD_DATA";
+    || errObj?.code === -32005
+    || errObj?.code === "BAD_DATA";
 }
 
 /** Retry an async fn with exponential backoff (for Infura rate limits) */
@@ -21,7 +22,7 @@ async function withRetry<T>(fn: () => Promise<T>, maxRetries = 4, baseMs = 3000)
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
       return await fn();
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (!isRateLimitError(err) || attempt === maxRetries) throw err;
       const delay = baseMs * Math.pow(2, attempt);
       console.warn(`[DealService] Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries})...`);
@@ -219,8 +220,18 @@ export class DealService {
   }
 
   /**
+   * Look up an agent's wallet address. Used for authorization checks.
+   */
+  getAgentWallet(agentId: string): string | undefined {
+    const agent = this.db
+      .prepare("SELECT wallet FROM agents WHERE agent_id = ?")
+      .get(agentId) as { wallet: string } | undefined;
+    return agent?.wallet;
+  }
+
+  /**
    * Agent submits work result for a funded deal.
-   * Only the server agent can deliver.
+   * Only the server agent can deliver (fail-closed: rejects if agent not found in DB).
    */
   deliverResult(nonce: string, result: string, agentWallet?: string) {
     const row = this.db
@@ -230,10 +241,12 @@ export class DealService {
     if (row.status !== "Funded") throw new ApiError(400, `Deal is ${row.status}, can only deliver on Funded deals`);
 
     if (agentWallet) {
-      const serverWallet = this.db
-        .prepare("SELECT wallet FROM agents WHERE agent_id = ?")
-        .get(row.server) as { wallet: string } | undefined;
-      if (serverWallet && serverWallet.wallet.toLowerCase() !== agentWallet.toLowerCase()) {
+      // Check if the caller's wallet matches the server agent's wallet.
+      // Fail-closed: if the server field is a wallet address, compare directly.
+      // If it's an agent ID, look up the wallet from the agents table.
+      const serverWallet = this.getAgentWallet(row.server);
+      const serverAddr = serverWallet || row.server; // Fall back to server field (may be a wallet address)
+      if (serverAddr.toLowerCase() !== agentWallet.toLowerCase()) {
         throw new ApiError(403, "Only the server agent can deliver results");
       }
     }
@@ -320,15 +333,21 @@ export class DealService {
 
   /**
    * Complete a deal on-chain. Calls escrow.completeDeal().
-   * Note: only deal.client can call this on the contract.
+   * Authorization: only the deal's client can complete it.
+   * Note: on-chain, only deal.client can call this on the contract.
    * The server wallet must be the client (facilitator mode for PoC).
    */
-  async completeDeal(nonce: string) {
+  async completeDeal(nonce: string, callerWallet?: string) {
     const row = this.db
       .prepare("SELECT * FROM deals WHERE nonce = ?")
       .get(nonce) as DealRow | undefined;
     if (!row) throw new ApiError(404, "Deal not found");
     if (row.status !== "Funded") throw new ApiError(400, `Deal is already ${row.status}`);
+
+    // Authorization: verify caller is the deal's client
+    if (callerWallet && row.client.toLowerCase() !== callerWallet.toLowerCase()) {
+      throw new ApiError(403, "Only the deal's client can complete it");
+    }
 
     const escrow = getEscrow();
     const tx = await escrow.completeDeal(nonce);
@@ -342,14 +361,20 @@ export class DealService {
 
   /**
    * Dispute a deal on-chain. Calls escrow.dispute() with ETH for arbitration fee.
+   * Authorization: only the deal's client can dispute it.
    * Note: only deal.client can call this on the contract.
    */
-  async disputeDeal(nonce: string) {
+  async disputeDeal(nonce: string, callerWallet?: string) {
     const row = this.db
       .prepare("SELECT * FROM deals WHERE nonce = ?")
       .get(nonce) as DealRow | undefined;
     if (!row) throw new ApiError(404, "Deal not found");
     if (row.status !== "Funded") throw new ApiError(400, `Deal is already ${row.status}`);
+
+    // Authorization: verify caller is the deal's client
+    if (callerWallet && row.client.toLowerCase() !== callerWallet.toLowerCase()) {
+      throw new ApiError(403, "Only the deal's client can dispute it");
+    }
 
     const escrow = getEscrow();
 
@@ -408,7 +433,19 @@ export class DealService {
     };
   }
 
-  async approveOrReject(approvalId: number, decision: "approved" | "rejected") {
+  async approveOrReject(approvalId: number, decision: "approved" | "rejected", callerWallet?: string) {
+    // First, look up the approval to check authorization before modifying
+    const approval = this.db
+      .prepare("SELECT * FROM pending_approvals WHERE id = ?")
+      .get(approvalId) as PendingApprovalRow | undefined;
+
+    if (!approval) throw new ApiError(404, "Pending approval not found");
+
+    // Authorization: verify caller is the principal who owns this pending approval
+    if (callerWallet && approval.principal.toLowerCase() !== callerWallet.toLowerCase()) {
+      throw new ApiError(403, "Only the principal can approve or reject their own deals");
+    }
+
     // Atomic check-and-update to prevent race condition (B-NEW-1):
     // UPDATE only if still 'pending', then check changes() to see if we won the race.
     const updateResult = this.db
@@ -416,14 +453,8 @@ export class DealService {
       .run(decision, approvalId);
 
     if (updateResult.changes === 0) {
-      throw new ApiError(404, "Pending approval not found or already processed");
+      throw new ApiError(409, "Pending approval already processed");
     }
-
-    const approval = this.db
-      .prepare("SELECT * FROM pending_approvals WHERE id = ?")
-      .get(approvalId) as PendingApprovalRow | undefined;
-
-    if (!approval) throw new ApiError(404, "Pending approval not found");
 
     if (decision === "approved") {
       const nonce = ethers.hexlify(ethers.randomBytes(32));

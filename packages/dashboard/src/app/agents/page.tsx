@@ -14,11 +14,23 @@ const CAPABILITIES = [
   "oracle",
 ];
 
+interface DiscoveredAgent {
+  agentId: string;
+  name: string;
+  description: string;
+  capabilities: string[];
+  basePrice: number;
+  wallet: string;
+  endpoint: string;
+  source: string;
+  reputation?: { bayesianScore: number };
+}
+
 const PAGE_SIZE = 60;
 
 export default function AgentsPage() {
   const [capability, setCapability] = useState("");
-  const [agents, setAgents] = useState<any[]>([]);
+  const [agents, setAgents] = useState<DiscoveredAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<string | null>(null);
@@ -93,8 +105,8 @@ export default function AgentsPage() {
         setSyncResult(`Synced ${data.synced} new agent${data.synced !== 1 ? "s" : ""} from Sepolia`);
         await loadAgents(activeFilter || undefined);
       }
-    } catch (err: any) {
-      setSyncResult(`Sync failed: ${err.message}`);
+    } catch (err: unknown) {
+      setSyncResult(`Sync failed: ${err instanceof Error ? err.message : "Unknown error"}`);
     } finally {
       setSyncing(false);
     }
@@ -212,7 +224,7 @@ export default function AgentsPage() {
             <div className="grid gap-px sm:grid-cols-2 lg:grid-cols-3">
               {sorted
                 .slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
-                .map((agent: any) => (
+                .map((agent) => (
                 <div key={agent.agentId} className="border border-[var(--border)]">
                   <AgentCard agent={agent} />
                 </div>

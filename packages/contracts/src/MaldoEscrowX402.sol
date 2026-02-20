@@ -142,6 +142,7 @@ contract MaldoEscrowX402 is IArbitrableV2, ReentrancyGuard {
         if (_arbitrator == address(0)) revert ZeroAddress();
         if (_facilitator == address(0)) revert ZeroAddress();
         if (_feeRecipient == address(0)) revert ZeroAddress();
+        if (_reputationRegistry == address(0)) revert ZeroAddress();
 
         usdc = IERC20(_usdc);
         arbitrator = IArbitratorV2(_arbitrator);
@@ -171,6 +172,8 @@ contract MaldoEscrowX402 is IArbitrableV2, ReentrancyGuard {
     ) external nonReentrant {
         // ── CHECKS ──
         if (msg.sender != facilitator) revert OnlyFacilitator();
+        if (_client == address(0)) revert ZeroAddress();
+        if (_server == address(0)) revert ZeroAddress();
         if (_totalAmount == 0) revert ZeroAmount();
         if (deals[_nonce].createdAt != 0) revert DealAlreadySettled(); // duplicate nonce guard
 

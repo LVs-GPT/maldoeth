@@ -48,6 +48,32 @@ const PRESETS = [
 ];
 
 // ─── Capability presets ─────────────────────────────────────────────
+interface AgentInfo {
+  agentId: string;
+  name: string;
+  description: string;
+  capabilities: string[];
+  basePrice: number;
+  wallet: string;
+  endpoint: string;
+  txHash?: string;
+  createdAt: string;
+}
+
+interface RegistrationResult {
+  agentId: string;
+  name: string;
+  txHash?: string;
+}
+
+interface CriteriaData {
+  preset: string;
+  minReputation: number;
+  minReviewCount: number;
+  maxPriceUSDC: number;
+  requireHumanApproval: boolean;
+}
+
 const CAPABILITY_OPTIONS = [
   "market-analysis",
   "code-review",
@@ -62,7 +88,7 @@ const CAPABILITY_OPTIONS = [
 export default function MyAgentPage() {
   const { address, isConnected } = useWallet();
   const [tab, setTab] = useState<"profile" | "criteria">("profile");
-  const [myAgents, setMyAgents] = useState<any[]>([]);
+  const [myAgents, setMyAgents] = useState<AgentInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadMyAgents = useCallback(async () => {
@@ -163,7 +189,7 @@ function RegisterForm({ wallet, onRegistered }: { wallet: string; onRegistered: 
   const [endpoint, setEndpoint] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState<any>(null);
+  const [success, setSuccess] = useState<RegistrationResult | null>(null);
   const { toast } = useToast();
 
   const toggleCap = (cap: string) => {
@@ -197,9 +223,10 @@ function RegisterForm({ wallet, onRegistered }: { wallet: string; onRegistered: 
       setSuccess(result);
       toast("success", "Agent registered! Now visible in the marketplace.", result.txHash);
       setTimeout(() => onRegistered(), 1500);
-    } catch (err: any) {
-      setError(err.message || "Registration failed");
-      toast("error", err.message || "Registration failed");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Registration failed";
+      setError(message);
+      toast("error", message);
     } finally {
       setSubmitting(false);
     }
@@ -372,7 +399,7 @@ function RegisterForm({ wallet, onRegistered }: { wallet: string; onRegistered: 
 // AGENT PROFILE
 // ═══════════════════════════════════════════════════════════════════════
 
-function AgentProfile({ agent }: { agent: any }) {
+function AgentProfile({ agent }: { agent: AgentInfo }) {
   return (
     <div className="space-y-6">
       {/* Agent card */}
@@ -453,7 +480,7 @@ function CriteriaTab({ address }: { address: string }) {
   const [currentPreset, setCurrentPreset] = useState("Conservative");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [criteriaData, setCriteriaData] = useState<any>(null);
+  const [criteriaData, setCriteriaData] = useState<CriteriaData | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -475,8 +502,8 @@ function CriteriaTab({ address }: { address: string }) {
       setSaved(true);
       toast("success", `Criteria updated to "${preset}".`);
       setTimeout(() => setSaved(false), 2000);
-    } catch (err: any) {
-      toast("error", err.message || "Failed to save criteria");
+    } catch (err: unknown) {
+      toast("error", err instanceof Error ? err.message : "Failed to save criteria");
     } finally {
       setSaving(false);
     }

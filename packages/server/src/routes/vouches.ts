@@ -8,18 +8,19 @@ export function createVouchRouter(vouchService: VouchService): Router {
   const router = Router();
 
   // POST /api/v1/agents/:agentId/vouch — submit a vouch for this agent
+  // Authorization: voucherWallet must match the authenticated wallet
   router.post("/:agentId/vouch", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { voucherAgentId, voucherWallet, signature } = req.body;
+      const { voucherAgentId, signature } = req.body;
 
       if (!voucherAgentId) throw new ApiError(400, "voucherAgentId is required");
-      if (!voucherWallet) throw new ApiError(400, "voucherWallet is required");
       if (!signature) throw new ApiError(400, "signature is required");
 
+      // Use authenticated wallet as voucher wallet (prevents spoofing)
       const result = await vouchService.submitVouch({
         voucherAgentId,
         voucheeAgentId: req.params.agentId,
-        voucherWallet,
+        voucherWallet: req.walletAddress!,
         signature,
       });
 

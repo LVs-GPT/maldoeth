@@ -17,9 +17,15 @@ export function createCriteriaRouter(criteriaService: CriteriaService): Router {
     }
   });
 
-  // PUT /api/v1/principals/:address/criteria — auth required: only the principal can update their own criteria
+  // PUT /api/v1/principals/:address/criteria — auth + authorization: only the principal can update their own criteria
   router.put("/:address/criteria", requireAuth, writeRateLimit, (req: Request, res: Response, next: NextFunction) => {
     try {
+      // Authorization: only the principal can update their own criteria
+      if (req.walletAddress!.toLowerCase() !== req.params.address.toLowerCase()) {
+        res.status(403).json({ error: "You can only update your own criteria" });
+        return;
+      }
+
       const { preset, minReputation, minReviewCount, maxPriceUSDC, requireHumanApproval } = req.body;
 
       const criteria = criteriaService.setCriteria(req.params.address, {

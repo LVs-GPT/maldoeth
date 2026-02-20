@@ -82,7 +82,11 @@ contract MaldoRouter is Ownable2Step {
     // CONSTRUCTOR
     // ═══════════════════════════════════════════════════════════
 
+    error ZeroAddress();
+
     constructor(address _reputationRegistry, address _escrow) Ownable(msg.sender) {
+        if (_reputationRegistry == address(0)) revert ZeroAddress();
+        if (_escrow == address(0)) revert ZeroAddress();
         reputationRegistry = IERC8004Reputation(_reputationRegistry);
         escrow = _escrow;
     }

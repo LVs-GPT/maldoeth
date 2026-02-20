@@ -2,12 +2,34 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import type Database from "better-sqlite3";
 import { config } from "../config.js";
 import { ApiError } from "../services/registration.js";
+import { requireAuth } from "../middleware/auth.js";
+import { writeRateLimit } from "../middleware/rateLimit.js";
+
+/** DB row shape for agent queries */
+interface AgentRow {
+  agent_id: string;
+  name: string;
+  capabilities: string;
+  base_price: number;
+  wallet: string;
+  endpoint: string;
+}
+
+/** DB row shape for deal queries */
+interface DealRow {
+  nonce: string;
+  client: string;
+  server: string;
+  amount: number;
+  status: string;
+  task_description: string | null;
+}
 
 /**
  * x402 routes — HTTP payment path for web-native agents.
  *
  * GET  /x402/services/:capability  → 402 with payment requirements
- * POST /x402/services/:capability  → process paid request
+ * POST /x402/services/:capability  → process paid request (auth required)
  * GET  /x402/deals/:nonce/result   → poll for result
  */
 export function createX402Router(db: Database.Database): Router {
@@ -23,7 +45,7 @@ export function createX402Router(db: Database.Database): Router {
         .prepare(
           `SELECT * FROM agents WHERE capabilities LIKE ? ORDER BY base_price ASC LIMIT 1`,
         )
-        .get(`%"${capability}"%`) as any;
+        .get(`%"${capability}"%`) as AgentRow | undefined;
 
       if (!agent) {
         throw new ApiError(404, `No agents found with capability: ${capability}`);
@@ -57,21 +79,20 @@ export function createX402Router(db: Database.Database): Router {
     }
   });
 
-  // POST /x402/services/:capability → Execute after payment
-  router.post("/services/:capability", (req: Request, res: Response, next: NextFunction) => {
+  // POST /x402/services/:capability → Execute after payment (auth required)
+  router.post("/services/:capability", requireAuth, writeRateLimit, (req: Request, res: Response, next: NextFunction) => {
     try {
       const { capability } = req.params;
-      const { taskDescription, clientAddress, nonce } = req.body;
+      const { taskDescription, nonce } = req.body;
 
       if (!taskDescription) throw new ApiError(400, "taskDescription is required");
-      if (!clientAddress) throw new ApiError(400, "clientAddress is required");
 
       // Find agent
       const agent = db
         .prepare(
           `SELECT * FROM agents WHERE capabilities LIKE ? ORDER BY base_price ASC LIMIT 1`,
         )
-        .get(`%"${capability}"%`) as any;
+        .get(`%"${capability}"%`) as AgentRow | undefined;
 
       if (!agent) {
         throw new ApiError(404, `No agents found with capability: ${capability}`);
@@ -85,12 +106,13 @@ export function createX402Router(db: Database.Database): Router {
       // For PoC testing without facilitator, we create a local deal record
       const dealNonce = nonce || `0x${Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString("hex")}`;
 
+      // Use authenticated wallet as client address (prevents spoofing)
       db.prepare(
         `INSERT INTO deals (nonce, client, server, amount, status, task_description)
          VALUES (?, ?, ?, ?, 'Funded', ?)`,
       ).run(
         dealNonce,
-        clientAddress.toLowerCase(),
+        req.walletAddress!.toLowerCase(),
         agent.agent_id,
         agent.base_price,
         taskDescription,
@@ -113,7 +135,7 @@ export function createX402Router(db: Database.Database): Router {
     try {
       const deal = db
         .prepare("SELECT * FROM deals WHERE nonce = ?")
-        .get(req.params.nonce) as any;
+        .get(req.params.nonce) as DealRow | undefined;
 
       if (!deal) throw new ApiError(404, "Deal not found");
 

@@ -66,9 +66,10 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
   });
 
   // POST /api/v1/deals/:nonce/complete — completes deal on-chain (releases USDC to server)
+  // Authorization: only the deal's client can complete it
   router.post("/:nonce/complete", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await dealService.completeDeal(req.params.nonce);
+      const result = await dealService.completeDeal(req.params.nonce, req.walletAddress!);
       res.json(result);
     } catch (err) {
       next(err);
@@ -76,9 +77,10 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
   });
 
   // POST /api/v1/deals/:nonce/dispute — disputes deal on-chain (freezes USDC, pays arbitration fee)
+  // Authorization: only the deal's client can dispute it
   router.post("/:nonce/dispute", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await dealService.disputeDeal(req.params.nonce);
+      const result = await dealService.disputeDeal(req.params.nonce, req.walletAddress!);
       res.json(result);
     } catch (err) {
       next(err);
@@ -98,20 +100,20 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
     }
   });
 
-  // POST /api/v1/deals/approve/:id
+  // POST /api/v1/deals/approve/:id — authorization: only the principal can approve their own pending deals
   router.post("/approve/:id", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await dealService.approveOrReject(parseInt(req.params.id, 10), "approved");
+      const result = await dealService.approveOrReject(parseInt(req.params.id, 10), "approved", req.walletAddress!);
       res.json(result);
     } catch (err) {
       next(err);
     }
   });
 
-  // POST /api/v1/deals/reject/:id
+  // POST /api/v1/deals/reject/:id — authorization: only the principal can reject their own pending deals
   router.post("/reject/:id", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await dealService.approveOrReject(parseInt(req.params.id, 10), "rejected");
+      const result = await dealService.approveOrReject(parseInt(req.params.id, 10), "rejected", req.walletAddress!);
       res.json(result);
     } catch (err) {
       next(err);
@@ -199,12 +201,19 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
   });
 
   // POST /api/v1/deals/webhooks — register a webhook for an agent
+  // Authorization: only the agent's owner can register webhooks for it
   router.post("/webhooks", requireAuth, writeRateLimit, (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!webhookService) throw new ApiError(503, "Webhook service not available");
       const { agentId, endpoint, secret } = req.body;
       if (!agentId) throw new ApiError(400, "agentId is required");
       if (!endpoint) throw new ApiError(400, "endpoint URL is required");
+
+      // Verify caller owns the agent
+      const agent = dealService.getAgentWallet(agentId);
+      if (agent && agent.toLowerCase() !== req.walletAddress!.toLowerCase()) {
+        throw new ApiError(403, "You can only register webhooks for your own agents");
+      }
 
       webhookService.registerWebhook(agentId, endpoint, secret);
       res.json({ agentId, endpoint, status: "registered" });
@@ -214,9 +223,17 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
   });
 
   // DELETE /api/v1/deals/webhooks/:agentId — remove webhook
+  // Authorization: only the agent's owner can remove webhooks
   router.delete("/webhooks/:agentId", requireAuth, (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!webhookService) throw new ApiError(503, "Webhook service not available");
+
+      // Verify caller owns the agent
+      const agent = dealService.getAgentWallet(req.params.agentId);
+      if (agent && agent.toLowerCase() !== req.walletAddress!.toLowerCase()) {
+        throw new ApiError(403, "You can only remove webhooks for your own agents");
+      }
+
       webhookService.removeWebhook(req.params.agentId);
       res.json({ status: "removed" });
     } catch (err) {

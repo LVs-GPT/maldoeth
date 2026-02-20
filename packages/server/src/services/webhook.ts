@@ -19,26 +19,48 @@ export interface DealEvent {
 
 /**
  * Blocked URL patterns for SSRF prevention (B-3).
- * Blocks: localhost, private IPs, link-local, metadata endpoints.
+ * Blocks: localhost, private IPs (dotted, decimal, octal, hex),
+ * link-local, metadata endpoints, 0.0.0.0, and IPv6 private ranges.
  */
 const SSRF_BLOCKED_PATTERNS = [
   /^https?:\/\/localhost/i,
   /^https?:\/\/127\./,
   /^https?:\/\/0\./,
+  /^https?:\/\/0+\./,                    // Octal: 0177.0.0.1
   /^https?:\/\/10\./,
   /^https?:\/\/172\.(1[6-9]|2\d|3[01])\./,
   /^https?:\/\/192\.168\./,
   /^https?:\/\/169\.254\./,
   /^https?:\/\/\[::1\]/,
-  /^https?:\/\/\[fd/i,
-  /^https?:\/\/\[fe80:/i,
+  /^https?:\/\/\[fd/i,                   // IPv6 ULA
+  /^https?:\/\/\[fe80:/i,               // IPv6 link-local
+  /^https?:\/\/\[fc/i,                   // IPv6 ULA
+  /^https?:\/\/\[::ffff:7f/i,           // IPv4-mapped loopback
+  /^https?:\/\/\[::ffff:a\./i,          // IPv4-mapped 10.x
+  /^https?:\/\/\[::ffff:c0a8/i,         // IPv4-mapped 192.168
   /^https?:\/\/metadata\./i,
+  /^https?:\/\/0x[0-9a-f]/i,            // Hex IP: 0x7f000001
+  /^https?:\/\/\d{8,}/,                 // Decimal IP: 2130706433 = 127.0.0.1
 ];
+
+/** Additional hostname checks that regex can't cover */
+function isBlockedHostname(hostname: string): boolean {
+  // Block 0.0.0.0
+  if (hostname === "0.0.0.0") return true;
+  // Block any hostname that is a pure decimal number (decimal IP encoding)
+  if (/^\d+$/.test(hostname)) return true;
+  // Block hex-encoded IPs
+  if (/^0x[0-9a-f]+$/i.test(hostname)) return true;
+  // Block octal-encoded IPs (starts with 0 and all digits)
+  if (/^0\d+$/.test(hostname)) return true;
+  return false;
+}
 
 function isSafeUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    if (isBlockedHostname(parsed.hostname)) return false;
     for (const pattern of SSRF_BLOCKED_PATTERNS) {
       if (pattern.test(url)) return false;
     }
@@ -125,12 +147,15 @@ export class WebhookService {
         headers["X-Maldo-Signature"] = `sha256=${computeSignature(body, webhook.secret)}`;
       }
 
-      await fetch(endpoint, {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers,
         body,
         signal: controller.signal,
+        redirect: "error", // Prevent redirect-based SSRF bypass
       });
+      // Ensure response is consumed to avoid memory leaks
+      void response;
 
       clearTimeout(timeout);
       console.log(`[Webhook] ${event.type} → ${endpoint.slice(0, 40)}...`);

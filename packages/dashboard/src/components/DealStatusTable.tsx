@@ -43,8 +43,8 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
       toast("success", "Deal completed. Funds released.", res?.txHash);
       setRatingDeal(deal);
       onUpdate?.();
-    } catch (err: any) {
-      toast("error", err.message || "Failed to complete deal");
+    } catch (err: unknown) {
+      toast("error", err instanceof Error ? err.message : "Failed to complete deal");
     } finally {
       setCompleting(null);
     }
@@ -57,8 +57,8 @@ export function DealStatusTable({ deals, userAddress, onUpdate }: Props) {
       const res = await disputeDeal(deal.nonce);
       toast("info", "Dispute opened. Funds frozen until ruling.", res?.txHash);
       onUpdate?.();
-    } catch (err: any) {
-      toast("error", err.message || "Failed to open dispute");
+    } catch (err: unknown) {
+      toast("error", err instanceof Error ? err.message : "Failed to open dispute");
     } finally {
       setDisputing(null);
     }
