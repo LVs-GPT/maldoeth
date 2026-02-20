@@ -27,6 +27,9 @@ __pycache__/
 # Deployments (keep the json, ignore backups)
 *.bak
 
+# Worktrees (sibling directories, not tracked)
+/maldoeth-worktrees/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -82,6 +82,47 @@ MALDO_ESCROW_ADDRESS=0x050F6703697727BdE54a8A753a18A1E269F58209
 MALDO_ROUTER_ADDRESS=0x3085A84e511063760d22535E22a688E99592520B
 ```
 
+## Git Worktree Workflow
+
+This project uses git worktrees for parallel branch development:
+
+```
+/home/user/maldoeth/                          ← feature branch (active dev)
+/home/user/maldoeth-worktrees/develop/        ← develop (integration)
+/home/user/maldoeth-worktrees/main/           ← main (production)
+```
+
+**Common commands:**
+
+```bash
+# List all worktrees
+git worktree list
+
+# Update develop worktree
+cd /home/user/maldoeth-worktrees/develop && git pull origin develop
+
+# Update main worktree
+cd /home/user/maldoeth-worktrees/main && git pull origin main
+
+# Add a new feature worktree
+git worktree add /home/user/maldoeth-worktrees/feature-xyz -b feature-xyz develop
+
+# Remove a worktree when done
+git worktree remove /home/user/maldoeth-worktrees/feature-xyz
+
+# Prune stale worktree references
+git worktree prune
+```
+
+**Branch flow:**
+```
+feature-branch → develop → main
+```
+
+- Feature branches merge into `develop` via PR
+- `develop` merges into `main` for production releases
+- Never push directly to `main`
+
 ## Key Invariants (must hold in all tests)
 
 1. `deal.fee + deal.amount == totalPaid` — no USDC is ever lost
