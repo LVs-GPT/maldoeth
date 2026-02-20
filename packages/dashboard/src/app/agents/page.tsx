@@ -23,7 +23,7 @@ interface DiscoveredAgent {
   wallet: string;
   endpoint: string;
   source: string;
-  reputation?: { bayesianScore: number };
+  reputation?: { bayesianScore: number; reviewCount: number; disputeRate: number; badges: string[] };
 }
 
 const PAGE_SIZE = 60;

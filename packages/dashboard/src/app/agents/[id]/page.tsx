@@ -93,10 +93,11 @@ export default function AgentProfilePage() {
     );
   }
 
+  const bayesian = reputation?.bayesianScore ?? 0;
   const scoreColor =
-    reputation?.bayesianScore >= 4.5
+    bayesian >= 4.5
       ? "text-[var(--green)]"
-      : reputation?.bayesianScore >= 3.5
+      : bayesian >= 3.5
         ? "text-[var(--yellow)]"
         : "text-[var(--red)]";
 
@@ -182,11 +183,11 @@ export default function AgentProfilePage() {
       </div>
 
       {/* Badges */}
-      {reputation?.badges?.length > 0 && (
+      {reputation?.badges && reputation.badges.length > 0 && (
         <section>
           <div className="section-label">Badges</div>
           <div className="flex flex-wrap gap-2">
-            {reputation.badges.map((badge: string) => (
+            {reputation.badges.map((badge) => (
               <span
                 key={badge}
                 className="tag border-[rgba(168,85,247,0.3)] text-[#a855f7]"
