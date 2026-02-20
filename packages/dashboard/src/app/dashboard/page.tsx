@@ -11,10 +11,13 @@ export default function DashboardPage() {
   const { address, isConnected } = useWallet();
   interface DealRow {
     nonce: string;
+    deal_id: number;
     status: string;
     client: string;
     server: string;
     amount: number;
+    task_description?: string;
+    created_at: string;
   }
   interface ApprovalRow {
     id: number;

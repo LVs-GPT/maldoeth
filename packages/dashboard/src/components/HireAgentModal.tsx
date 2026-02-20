@@ -43,7 +43,8 @@ export function HireAgentModal({ agentId, agentName, basePrice, clientAddress, o
       }
 
       if (!res.requiresHumanApproval && res.nonce) {
-        setTimeout(() => onSuccess(res.nonce), 1500);
+        const nonce = res.nonce;
+        setTimeout(() => onSuccess(nonce), 1500);
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to create deal";
