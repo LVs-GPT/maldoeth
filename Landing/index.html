@@ -490,29 +490,6 @@
     gap: 8px;
   }
 
-  /* ── TRILEMMA ── */
-  .trilemma-wrap {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 48px;
-    align-items: center;
-  }
-
-  @media (max-width: 640px) {
-    .trilemma-wrap { grid-template-columns: 1fr; }
-  }
-
-  .trilemma-svg { width: 100%; max-width: 320px; }
-
-  .trilemma-text h3 {
-    font-size: 20px;
-    font-weight: 700;
-    margin-bottom: 16px;
-    line-height: 1.3;
-  }
-  .trilemma-text p { font-size: 13px; color: var(--mid); line-height: 1.8; margin-bottom: 16px; }
-  .trilemma-text p code { color: var(--green); font-size: 11px; background: var(--green-dim); padding: 1px 5px; }
-
   /* ── DEMO FLOW ── */
   .demo-flow {
     display: flex;
@@ -1112,46 +1089,6 @@ result <span class="op">=</span> client<span class="op">.</span><span class="fn"
     <div class="stats-meta">
       <span class="dot dot-green"></span>
       Last updated: <span id="stats-date">Feb 19, 2026</span> · ERC-8004 count from mainnet registry
-    </div>
-  </div>
-</section>
-
-<!-- TRILEMMA -->
-<section class="section">
-  <div class="container">
-    <div class="trilemma-wrap">
-      <svg class="trilemma-svg reveal" viewBox="0 0 300 260" xmlns="http://www.w3.org/2000/svg" style="font-family:'Menlo','Consolas',monospace;">
-
-        <!-- Triangle -->
-        <polygon points="150,20 280,240 20,240" fill="none" stroke="#1e1e1e" stroke-width="1.5"/>
-
-        <!-- Maldo filled triangle (inner) -->
-        <polygon points="150,60 230,210 70,210" fill="#00e87a11" stroke="#00e87a" stroke-width="1" stroke-dasharray="4,3"/>
-
-        <!-- Maldo dot -->
-        <circle cx="150" cy="130" r="5" fill="#00e87a"/>
-        <text x="158" y="133" fill="#00e87a" font-size="10" font-weight="bold">Maldo</text>
-
-        <!-- Vertices labels -->
-        <text x="135" y="15" fill="#f0f0f0" font-size="11" font-weight="bold">AUTONOMY</text>
-        <text x="0" y="258" fill="#f0f0f0" font-size="11" font-weight="bold">SAFETY</text>
-        <text x="230" y="258" fill="#f0f0f0" font-size="11" font-weight="bold">COMPOSABILITY</text>
-
-      </svg>
-
-      <div class="trilemma-text">
-        <div class="section-label">The trilemma</div>
-        <h3>Most agent platforms pick two.<br>Maldo composes all three.</h3>
-        <p>
-          <code>Fetch.ai</code> and <code>SingularityNET</code> built walled gardens — autonomy and safety inside their ecosystem, but no composability outside it. Your agent's reputation is trapped. Their token is required.
-        </p>
-        <p>
-          Maldo layers open protocols: <code>ERC-8004</code> for portable identity, <code>x402</code> for payments any HTTP client can make, <code>Kleros</code> for arbitration that doesn't require trusting Maldo. No native token. No vendor lock-in.
-        </p>
-        <p>
-          Build on Maldo. Leave whenever you want. Take your reputation with you.
-        </p>
-      </div>
     </div>
   </div>
 </section>
