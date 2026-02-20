@@ -84,12 +84,20 @@ MALDO_ROUTER_ADDRESS=0x3085A84e511063760d22535E22a688E99592520B
 
 ## Git Worktree Workflow
 
-This project uses git worktrees for parallel branch development:
+This project uses git worktrees to work on different areas of the monorepo in parallel.
+Each worktree is a full checkout on its own feature branch, but only the relevant packages should be modified.
+
+| Worktree | Branch | Packages |
+|----------|--------|----------|
+| `wt/contracts` | `feat/contracts-audit` | `packages/contracts/` + `packages/subgraph/` |
+| `wt/server` | `feat/server-improvements` | `packages/server/` + `packages/sdk/` |
+| `wt/dashboard` | `feat/dashboard-cleanup` | `packages/dashboard/` |
 
 ```
-/home/user/maldoeth/                          ← feature branch (active dev)
-/home/user/maldoeth-worktrees/develop/        ← develop (integration)
-/home/user/maldoeth-worktrees/main/           ← main (production)
+/home/user/maldoeth/                              ← session branch (active dev)
+/home/user/maldoeth-worktrees/wt/contracts/       ← feat/contracts-audit
+/home/user/maldoeth-worktrees/wt/server/          ← feat/server-improvements
+/home/user/maldoeth-worktrees/wt/dashboard/       ← feat/dashboard-cleanup
 ```
 
 **Common commands:**
@@ -98,17 +106,11 @@ This project uses git worktrees for parallel branch development:
 # List all worktrees
 git worktree list
 
-# Update develop worktree
-cd /home/user/maldoeth-worktrees/develop && git pull origin develop
-
-# Update main worktree
-cd /home/user/maldoeth-worktrees/main && git pull origin main
-
-# Add a new feature worktree
-git worktree add /home/user/maldoeth-worktrees/feature-xyz -b feature-xyz develop
+# Work on contracts
+cd /home/user/maldoeth-worktrees/wt/contracts
 
 # Remove a worktree when done
-git worktree remove /home/user/maldoeth-worktrees/feature-xyz
+git worktree remove /home/user/maldoeth-worktrees/wt/contracts
 
 # Prune stale worktree references
 git worktree prune
@@ -116,11 +118,11 @@ git worktree prune
 
 **Branch flow:**
 ```
-feature-branch → develop → main
+feat/* → develop → main (manual push only)
 ```
 
 - Feature branches merge into `develop` via PR
-- `develop` merges into `main` for production releases
+- `develop` merges into `main` manually from GitHub
 - Never push directly to `main`
 
 ## Key Invariants (must hold in all tests)
