@@ -57,6 +57,7 @@ contract MaldoEscrowX402 is IArbitrableV2, ReentrancyGuard {
     error ArbitrationFeeTooLow();
     error InvalidRuling();
     error ZeroAmount();
+    error ZeroAddress();
     error TransferFailed();
 
     // ═══════════════════════════════════════════════════════════
@@ -137,6 +138,11 @@ contract MaldoEscrowX402 is IArbitrableV2, ReentrancyGuard {
         address _feeRecipient,
         address _reputationRegistry
     ) {
+        if (_usdc == address(0)) revert ZeroAddress();
+        if (_arbitrator == address(0)) revert ZeroAddress();
+        if (_facilitator == address(0)) revert ZeroAddress();
+        if (_feeRecipient == address(0)) revert ZeroAddress();
+
         usdc = IERC20(_usdc);
         arbitrator = IArbitratorV2(_arbitrator);
         facilitator = _facilitator;
@@ -150,8 +156,9 @@ contract MaldoEscrowX402 is IArbitrableV2, ReentrancyGuard {
 
     /// @notice Receive a payment from the x402 facilitator and create a deal.
     /// @dev ONLY callable by the x402 facilitator after verifying the payment authorization.
-    ///      The facilitator transfers USDC to this contract before calling this function.
-    ///      CEI: checks → effects (state) → interactions (none here, USDC already transferred).
+    ///      Uses safeTransferFrom to PULL USDC from facilitator — eliminates ghost deal risk.
+    ///      Facilitator must approve this contract for _totalAmount before calling.
+    ///      CEI: checks → effects → interactions (safeTransferFrom).
     /// @param _nonce Unique payment nonce from x402.
     /// @param _client The agent that paid (buyer).
     /// @param _server The agent that will provide the service (seller).
@@ -184,8 +191,10 @@ contract MaldoEscrowX402 is IArbitrableV2, ReentrancyGuard {
         });
 
         // ── INTERACTIONS ──
-        // USDC already in this contract (transferred by facilitator before calling us)
-        // No external calls needed here.
+        // Pull USDC from facilitator (requires prior approval).
+        // This ensures no ghost deals: if facilitator has insufficient USDC or
+        // didn't approve, the entire tx reverts.
+        usdc.safeTransferFrom(msg.sender, address(this), _totalAmount);
 
         emit DealFunded(_nonce, dealId, _client, _server, netAmount, fee);
     }
@@ -226,7 +235,9 @@ contract MaldoEscrowX402 is IArbitrableV2, ReentrancyGuard {
     /// @notice Client opens a dispute. Funds are frozen. MockKleros dispute is created.
     /// @dev Requires ETH for arbitration fee (paid to MockKleros/Kleros).
     ///      The arbitration fee is separate from the USDC deal amount.
-    ///      CEI: state updated before external call to arbitrator.
+    ///      CEI note: arbitratorDisputeId is set AFTER createDispute (unavoidable — it's
+    ///      the return value). nonReentrant guards against re-entrancy during createDispute.
+    ///      All other state is set before any external call.
     /// @param _nonce The deal nonce to dispute.
     function dispute(bytes32 _nonce) external payable nonReentrant {
         Deal storage deal = deals[_nonce];
@@ -239,34 +250,42 @@ contract MaldoEscrowX402 is IArbitrableV2, ReentrancyGuard {
         uint256 arbitrationCost = arbitrator.arbitrationCost("");
         if (msg.value < arbitrationCost) revert ArbitrationFeeTooLow();
 
-        // ── EFFECTS ──
+        // ── EFFECTS (pre-interaction) ──
         deal.status = DealStatus.Disputed;
 
-        // ── INTERACTIONS ──
-        // Call MockKleros (or real Kleros) to register the dispute.
-        // This is the correct Kleros v2 pattern: arbitrable calls createDispute with ETH fee.
+        // Cache values for events before any external calls
+        uint256 dealId = deal.dealId;
+        address dealClient = deal.client;
+        address dealServer = deal.server;
+        uint256 dealAmount = deal.amount;
+
+        // ── INTERACTION 1: Create dispute ──
         uint256 arbitratorDisputeId = arbitrator.createDispute{value: arbitrationCost}(
             AMOUNT_OF_CHOICES,
             "" // extraData: empty for PoC, can encode court ID for mainnet
         );
 
+        // ── EFFECTS (dependent on interaction return value) ──
         deal.arbitratorDisputeId = arbitratorDisputeId;
         arbitratorDisputeToNonce[arbitratorDisputeId] = _nonce;
 
-        // Refund excess ETH if client overpaid
+        // ── INTERACTION 2: Refund excess ETH ──
+        // Don't revert on failure — smart contract wallets may not accept ETH.
+        // Excess stays in contract and can be recovered by feeRecipient.
         uint256 excess = msg.value - arbitrationCost;
         if (excess > 0) {
             (bool ok,) = msg.sender.call{value: excess}("");
-            if (!ok) revert TransferFailed();
+            // ok is intentionally unused — dispute proceeds regardless
+            (ok); // silence unused variable warning
         }
 
         emit DisputeInitiated(
             _nonce,
-            deal.dealId,
+            dealId,
             arbitratorDisputeId,
-            deal.client,
-            deal.server,
-            deal.amount
+            dealClient,
+            dealServer,
+            dealAmount
         );
     }
 

@@ -1,12 +1,14 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import type { VouchService } from "../services/vouch.js";
 import { ApiError } from "../services/registration.js";
+import { requireAuth } from "../middleware/auth.js";
+import { writeRateLimit } from "../middleware/rateLimit.js";
 
 export function createVouchRouter(vouchService: VouchService): Router {
   const router = Router();
 
   // POST /api/v1/agents/:agentId/vouch — submit a vouch for this agent
-  router.post("/:agentId/vouch", async (req: Request, res: Response, next: NextFunction) => {
+  router.post("/:agentId/vouch", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { voucherAgentId, voucherWallet, signature } = req.body;
 
@@ -28,7 +30,7 @@ export function createVouchRouter(vouchService: VouchService): Router {
   });
 
   // DELETE /api/v1/agents/:voucheeId/vouch/:voucherId — withdraw vouch
-  router.delete("/:voucheeId/vouch/:voucherId", (req: Request, res: Response, next: NextFunction) => {
+  router.delete("/:voucheeId/vouch/:voucherId", requireAuth, (req: Request, res: Response, next: NextFunction) => {
     try {
       vouchService.withdrawVouch(req.params.voucherId, req.params.voucheeId);
       res.json({ status: "withdrawn" });

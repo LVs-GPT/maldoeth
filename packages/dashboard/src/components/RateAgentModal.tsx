@@ -9,12 +9,12 @@ interface Props {
   agentId: string;
   agentName: string;
   dealNonce: string;
-  raterAddress: string;
+  raterAddress?: string; // Kept for backward compatibility — backend now uses auth header
   onSuccess: () => void;
   onClose: () => void;
 }
 
-export function RateAgentModal({ agentId, agentName, dealNonce, raterAddress, onSuccess, onClose }: Props) {
+export function RateAgentModal({ agentId, agentName, dealNonce, onSuccess, onClose }: Props) {
   const [score, setScore] = useState(0);
   const [hoverScore, setHoverScore] = useState(0);
   const [comment, setComment] = useState("");
@@ -32,16 +32,16 @@ export function RateAgentModal({ agentId, agentName, dealNonce, raterAddress, on
     try {
       await rateAgent(agentId, {
         dealNonce,
-        raterAddress,
         score,
         comment: comment.trim() || undefined,
       });
       setDone(true);
       toast("success", `Rating submitted: ${score}/5`);
       setTimeout(onSuccess, 1200);
-    } catch (err: any) {
-      setError(err.message);
-      toast("error", err.message || "Failed to submit rating");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to submit rating";
+      setError(message);
+      toast("error", message);
     } finally {
       setLoading(false);
     }

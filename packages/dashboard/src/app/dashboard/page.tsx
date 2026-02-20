@@ -9,15 +9,25 @@ import { getPendingApprovals, listDeals } from "@/lib/api";
 
 export default function DashboardPage() {
   const { address, isConnected } = useWallet();
-  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
-  const [deals, setDeals] = useState<any[]>([]);
+  interface DealRow {
+    nonce: string;
+    status: string;
+    client: string;
+    server: string;
+    amount: number;
+  }
+  interface ApprovalRow {
+    id: number;
+    status: string;
+    agent_id: string;
+    price_usdc: number;
+  }
+  const [pendingApprovals, setPendingApprovals] = useState<ApprovalRow[]>([]);
+  const [deals, setDeals] = useState<DealRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   const loadData = useCallback(async () => {
-    // Only show full loading spinner on initial load, not on refresh after actions
-    if (deals.length === 0 && pendingApprovals.length === 0) {
-      setLoading(true);
-    }
+    setLoading(true);
     try {
       const [dealsData, pendingData] = await Promise.all([
         listDeals().catch(() => ({ deals: [] })),
@@ -33,7 +43,7 @@ export default function DashboardPage() {
     } finally {
       setLoading(false);
     }
-  }, [address, deals.length, pendingApprovals.length]);
+  }, [address]); // F-4 fix: removed deals.length and pendingApprovals.length to prevent re-render loop
 
   useEffect(() => {
     loadData();
@@ -58,9 +68,9 @@ export default function DashboardPage() {
   }
 
   const totalDeals = deals.length;
-  const activeDeals = deals.filter((d: any) => d.status === "Funded").length;
-  const completedDeals = deals.filter((d: any) => d.status === "Completed").length;
-  const disputedDeals = deals.filter((d: any) => d.status === "Disputed").length;
+  const activeDeals = deals.filter((d) => d.status === "Funded").length;
+  const completedDeals = deals.filter((d) => d.status === "Completed").length;
+  const disputedDeals = deals.filter((d) => d.status === "Disputed").length;
 
   return (
     <div className="space-y-8 pt-14 sm:space-y-12 sm:pt-16">
@@ -98,7 +108,7 @@ export default function DashboardPage() {
             Pending Approvals ({pendingApprovals.length})
           </div>
           <div className="grid gap-px bg-[var(--border)] sm:grid-cols-2">
-            {pendingApprovals.map((approval: any) => (
+            {pendingApprovals.map((approval) => (
               <PendingApprovalCard
                 key={approval.id}
                 approval={approval}

@@ -29,10 +29,7 @@ export default function DisputesPage() {
   const [resolved, setResolved] = useState<Record<string, string>>({});
 
   const loadData = useCallback(async () => {
-    // Only show loading spinner on initial load
-    if (deals.length === 0) {
-      setLoading(true);
-    }
+    setLoading(true);
     try {
       const data = await listDeals();
       setDeals((data.deals || []).filter((d: Deal) => d.status === "Disputed"));
@@ -41,7 +38,7 @@ export default function DisputesPage() {
     } finally {
       setLoading(false);
     }
-  }, [deals.length]);
+  }, []); // F-4 fix: removed deals.length to prevent re-render loop
 
   useEffect(() => {
     loadData();
@@ -59,8 +56,8 @@ export default function DisputesPage() {
       setResolved((prev) => ({ ...prev, [deal.nonce]: label }));
       toast("success", `Dispute resolved: ${label}`, res?.txHash);
       setTimeout(() => loadData(), 1500);
-    } catch (err: any) {
-      toast("error", err.message || "Failed to resolve dispute");
+    } catch (err: unknown) {
+      toast("error", err instanceof Error ? err.message : "Failed to resolve dispute");
     } finally {
       setResolving(null);
     }

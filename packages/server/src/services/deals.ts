@@ -172,8 +172,14 @@ export class DealService {
   }
 
   /**
-   * On-chain: approve USDC + transfer to escrow + call receivePayment.
+   * On-chain: approve escrow + call receivePayment (which pulls USDC via safeTransferFrom).
    * The server wallet is the facilitator (set in escrow constructor).
+   *
+   * Flow (post-audit fix C-2):
+   *   1. Approve escrow to spend USDC
+   *   2. Call receivePayment — escrow pulls USDC via safeTransferFrom
+   *   (Step 2 of the old pattern — manual transfer — is removed because the
+   *    contract now pulls USDC itself, eliminating ghost deal risk.)
    */
   private async fundDealOnChain(
     nonce: string,
@@ -188,7 +194,7 @@ export class DealService {
     // Each step retried individually to avoid double-spending on retry
     // Delays between steps to stay under Infura rate limits
 
-    // 1. Approve escrow to spend USDC
+    // 1. Approve escrow to spend USDC (escrow will pull via safeTransferFrom)
     await withRetry(async () => {
       const approveTx = await usdc.approve(config.escrowAddress, totalAmount);
       await approveTx.wait();
@@ -196,15 +202,7 @@ export class DealService {
 
     await sleep(1500);
 
-    // 2. Transfer USDC to escrow contract
-    await withRetry(async () => {
-      const transferTx = await usdc.transfer(config.escrowAddress, totalAmount);
-      await transferTx.wait();
-    });
-
-    await sleep(1500);
-
-    // 3. Call receivePayment as facilitator.
+    // 2. Call receivePayment as facilitator — escrow pulls USDC via safeTransferFrom.
     //    Use signer address as on-chain client so the server wallet can call
     //    completeDeal / dispute (which require msg.sender == deal.client).
     //    The real client address is tracked in the local DB.
@@ -411,15 +409,21 @@ export class DealService {
   }
 
   async approveOrReject(approvalId: number, decision: "approved" | "rejected") {
+    // Atomic check-and-update to prevent race condition (B-NEW-1):
+    // UPDATE only if still 'pending', then check changes() to see if we won the race.
+    const updateResult = this.db
+      .prepare("UPDATE pending_approvals SET status = ? WHERE id = ? AND status = 'pending'")
+      .run(decision, approvalId);
+
+    if (updateResult.changes === 0) {
+      throw new ApiError(404, "Pending approval not found or already processed");
+    }
+
     const approval = this.db
-      .prepare("SELECT * FROM pending_approvals WHERE id = ? AND status = 'pending'")
+      .prepare("SELECT * FROM pending_approvals WHERE id = ?")
       .get(approvalId) as PendingApprovalRow | undefined;
 
-    if (!approval) throw new ApiError(404, "Pending approval not found or already processed");
-
-    this.db
-      .prepare("UPDATE pending_approvals SET status = ? WHERE id = ?")
-      .run(decision, approvalId);
+    if (!approval) throw new ApiError(404, "Pending approval not found");
 
     if (decision === "approved") {
       const nonce = ethers.hexlify(ethers.randomBytes(32));

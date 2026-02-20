@@ -20,6 +20,7 @@ contract MockKleros is IArbitratorV2 {
     error DisputeAlreadyResolved();
     error RulingOutOfBounds();
     error InsufficientFee();
+    error WithdrawFailed();
 
     // ═══════════════════════════════════════════════════════════
     // EVENTS
@@ -157,6 +158,6 @@ contract MockKleros is IArbitratorV2 {
     /// @notice Withdraw accumulated arbitration fees (ETH paid by disputors).
     function withdraw() external onlyOwner {
         (bool ok,) = owner.call{value: address(this).balance}("");
-        require(ok);
+        if (!ok) revert WithdrawFailed();
     }
 }

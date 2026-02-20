@@ -2,6 +2,8 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import type { RegistrationService } from "../services/registration.js";
 import type { DiscoveryService } from "../services/discovery.js";
 import { ApiError } from "../services/registration.js";
+import { requireAuth } from "../middleware/auth.js";
+import { writeRateLimit } from "../middleware/rateLimit.js";
 
 export function createServicesRouter(
   registration: RegistrationService,
@@ -9,8 +11,8 @@ export function createServicesRouter(
 ): Router {
   const router = Router();
 
-  // POST /api/v1/services/register
-  router.post("/register", async (req: Request, res: Response, next: NextFunction) => {
+  // POST /api/v1/services/register — auth required to prevent spam registration (B-NEW-2)
+  router.post("/register", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { name, description, capabilities, basePrice, endpoint, wallet } = req.body;
 

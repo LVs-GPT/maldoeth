@@ -2,12 +2,18 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import type { DealService } from "../services/deals.js";
 import type { WebhookService } from "../services/webhook.js";
 import { ApiError } from "../services/registration.js";
+import { requireAuth } from "../middleware/auth.js";
+import { writeRateLimit } from "../middleware/rateLimit.js";
+
+// Max concurrent SSE connections to prevent DoS (B-NEW-2 / BE-15)
+const MAX_SSE_CONNECTIONS = 100;
+let activeSseConnections = 0;
 
 export function createDealsRouter(dealService: DealService, webhookService?: WebhookService): Router {
   const router = Router();
 
   // POST /api/v1/deals/create — creates deal on-chain (USDC transfer + escrow)
-  router.post("/create", async (req: Request, res: Response, next: NextFunction) => {
+  router.post("/create", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { agentId, clientAddress, priceUSDC, taskDescription, principal } = req.body;
       if (!agentId) throw new ApiError(400, "agentId is required");
@@ -60,7 +66,7 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
   });
 
   // POST /api/v1/deals/:nonce/complete — completes deal on-chain (releases USDC to server)
-  router.post("/:nonce/complete", async (req: Request, res: Response, next: NextFunction) => {
+  router.post("/:nonce/complete", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await dealService.completeDeal(req.params.nonce);
       res.json(result);
@@ -70,7 +76,7 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
   });
 
   // POST /api/v1/deals/:nonce/dispute — disputes deal on-chain (freezes USDC, pays arbitration fee)
-  router.post("/:nonce/dispute", async (req: Request, res: Response, next: NextFunction) => {
+  router.post("/:nonce/dispute", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await dealService.disputeDeal(req.params.nonce);
       res.json(result);
@@ -81,7 +87,7 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
 
   // POST /api/v1/deals/:nonce/resolve — resolves dispute via MockKleros
   // Body: { ruling: 0 | 1 | 2 } → 0=split, 1=buyer wins, 2=seller wins
-  router.post("/:nonce/resolve", async (req: Request, res: Response, next: NextFunction) => {
+  router.post("/:nonce/resolve", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { ruling } = req.body;
       if (ruling === undefined || ruling === null) throw new ApiError(400, "ruling is required (0=split, 1=buyer-wins, 2=seller-wins)");
@@ -93,7 +99,7 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
   });
 
   // POST /api/v1/deals/approve/:id
-  router.post("/approve/:id", async (req: Request, res: Response, next: NextFunction) => {
+  router.post("/approve/:id", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await dealService.approveOrReject(parseInt(req.params.id, 10), "approved");
       res.json(result);
@@ -103,7 +109,7 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
   });
 
   // POST /api/v1/deals/reject/:id
-  router.post("/reject/:id", async (req: Request, res: Response, next: NextFunction) => {
+  router.post("/reject/:id", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       const result = await dealService.approveOrReject(parseInt(req.params.id, 10), "rejected");
       res.json(result);
@@ -113,12 +119,14 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
   });
 
   // POST /api/v1/deals/:nonce/deliver — agent submits work result
-  router.post("/:nonce/deliver", (req: Request, res: Response, next: NextFunction) => {
+  // B-7: Use authenticated wallet instead of body-supplied agentWallet to prevent spoofing
+  router.post("/:nonce/deliver", requireAuth, writeRateLimit, (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { result, agentWallet } = req.body;
+      const { result } = req.body;
       if (!result) throw new ApiError(400, "result is required (the work output)");
 
-      const delivery = dealService.deliverResult(req.params.nonce, result, agentWallet);
+      // Use authenticated wallet (from header) — prevents delivery auth bypass
+      const delivery = dealService.deliverResult(req.params.nonce, result, req.walletAddress);
 
       // Notify via webhook
       webhookService?.emit({
@@ -151,6 +159,13 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
       return;
     }
 
+    // Limit concurrent SSE connections to prevent DoS
+    if (activeSseConnections >= MAX_SSE_CONNECTIONS) {
+      res.status(503).json({ error: "Too many active connections" });
+      return;
+    }
+    activeSseConnections++;
+
     const wallet = (req.query.wallet as string || "").toLowerCase();
 
     res.writeHead(200, {
@@ -179,11 +194,12 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
     req.on("close", () => {
       clearInterval(keepAlive);
       unsubscribe();
+      activeSseConnections--;
     });
   });
 
   // POST /api/v1/deals/webhooks — register a webhook for an agent
-  router.post("/webhooks", (req: Request, res: Response, next: NextFunction) => {
+  router.post("/webhooks", requireAuth, writeRateLimit, (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!webhookService) throw new ApiError(503, "Webhook service not available");
       const { agentId, endpoint, secret } = req.body;
@@ -198,7 +214,7 @@ export function createDealsRouter(dealService: DealService, webhookService?: Web
   });
 
   // DELETE /api/v1/deals/webhooks/:agentId — remove webhook
-  router.delete("/webhooks/:agentId", (req: Request, res: Response, next: NextFunction) => {
+  router.delete("/webhooks/:agentId", requireAuth, (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!webhookService) throw new ApiError(503, "Webhook service not available");
       webhookService.removeWebhook(req.params.agentId);

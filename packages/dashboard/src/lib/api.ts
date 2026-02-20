@@ -1,15 +1,35 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
+/**
+ * Get auth headers for API requests.
+ * Reads wallet address from localStorage (set by useWallet hook on login).
+ * For production: replace with Privy access token.
+ */
+function getAuthHeaders(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const wallet = localStorage.getItem("maldo_wallet_address");
+  if (wallet) {
+    return { "X-Wallet-Address": wallet };
+  }
+  return {};
+}
+
 async function fetchApi(path: string, options?: RequestInit) {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...getAuthHeaders(),
       ...options?.headers,
     },
   });
   if (!res.ok && res.status !== 402) {
-    const body = await res.json().catch(() => ({}));
+    let body: Record<string, string> = {};
+    try {
+      body = await res.json();
+    } catch {
+      // Response may not be JSON
+    }
     throw new Error(body.error || res.statusText);
   }
   return res.json();
@@ -113,7 +133,6 @@ export async function resolveDispute(nonce: string, ruling: number) {
 
 export async function rateAgent(agentId: string, body: {
   dealNonce: string;
-  raterAddress: string;
   score: number;
   comment?: string;
 }) {

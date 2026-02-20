@@ -1,3 +1,4 @@
+import { createHmac } from "node:crypto";
 import type Database from "better-sqlite3";
 
 export type DealEventType =
@@ -14,6 +15,42 @@ export interface DealEvent {
   nonce: string;
   timestamp: string;
   data: Record<string, unknown>;
+}
+
+/**
+ * Blocked URL patterns for SSRF prevention (B-3).
+ * Blocks: localhost, private IPs, link-local, metadata endpoints.
+ */
+const SSRF_BLOCKED_PATTERNS = [
+  /^https?:\/\/localhost/i,
+  /^https?:\/\/127\./,
+  /^https?:\/\/0\./,
+  /^https?:\/\/10\./,
+  /^https?:\/\/172\.(1[6-9]|2\d|3[01])\./,
+  /^https?:\/\/192\.168\./,
+  /^https?:\/\/169\.254\./,
+  /^https?:\/\/\[::1\]/,
+  /^https?:\/\/\[fd/i,
+  /^https?:\/\/\[fe80:/i,
+  /^https?:\/\/metadata\./i,
+];
+
+function isSafeUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return false;
+    for (const pattern of SSRF_BLOCKED_PATTERNS) {
+      if (pattern.test(url)) return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Compute HMAC-SHA256 signature for webhook payload (B-4) */
+function computeSignature(body: string, secret: string): string {
+  return createHmac("sha256", secret).update(body).digest("hex");
 }
 
 /**
@@ -66,31 +103,50 @@ export class WebhookService {
 
     if (!endpoint) return;
 
+    // SSRF prevention: validate URL before making request
+    if (!isSafeUrl(endpoint)) {
+      console.warn(`[Webhook] Blocked SSRF attempt to ${endpoint.slice(0, 40)}...`);
+      return;
+    }
+
     // Fire-and-forget POST to agent's endpoint
     try {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 5000);
 
+      const body = JSON.stringify(event);
+
+      // Use HMAC signature instead of plaintext secret (B-4)
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "X-Maldo-Event": event.type,
+      };
+      if (webhook?.secret) {
+        headers["X-Maldo-Signature"] = `sha256=${computeSignature(body, webhook.secret)}`;
+      }
+
       await fetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Maldo-Event": event.type,
-          ...(webhook?.secret ? { "X-Maldo-Secret": webhook.secret } : {}),
-        },
-        body: JSON.stringify(event),
+        headers,
+        body,
         signal: controller.signal,
       });
 
       clearTimeout(timeout);
       console.log(`[Webhook] ${event.type} → ${endpoint.slice(0, 40)}...`);
-    } catch (err: any) {
-      console.warn(`[Webhook] Failed to notify ${endpoint.slice(0, 40)}...: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Unknown error";
+      console.warn(`[Webhook] Failed to notify ${endpoint.slice(0, 40)}...: ${message}`);
     }
   }
 
   /** Register or update a webhook for an agent */
   registerWebhook(agentId: string, endpoint: string, secret?: string): void {
+    // Validate endpoint URL before storing
+    if (!isSafeUrl(endpoint)) {
+      throw new Error("Invalid webhook URL: must be a public HTTP(S) endpoint");
+    }
+
     this.db
       .prepare(
         `INSERT INTO webhook_registrations (agent_id, endpoint, secret)

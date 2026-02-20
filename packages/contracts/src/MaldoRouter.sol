@@ -18,18 +18,20 @@ contract MaldoRouter is Ownable2Step {
     uint256 public constant MAX_FEE_BPS = 500;          // 5% — HARDCODED, NEVER changeable
     uint256 public constant HIGH_VALUE_THRESHOLD = 100_000_000; // $100 USDC (6 decimals)
 
-    // Preset values (stored as constants to save gas)
-    uint256 public constant CONSERVATIVE_REP = 480;    // 4.80 stars
+    // Preset values — SINGLE SOURCE OF TRUTH.
+    // Backend (criteria.ts) and landing page (index.html) MUST match these values.
+    // Aligned across all three layers per audit fix.
+    uint256 public constant CONSERVATIVE_REP = 480;        // 4.80 stars
     uint256 public constant CONSERVATIVE_REVIEWS = 5;
-    uint256 public constant CONSERVATIVE_PRICE = 50_000_000; // $50
+    uint256 public constant CONSERVATIVE_PRICE = 100_000;  // $0.10 USDC
 
-    uint256 public constant BALANCED_REP = 450;        // 4.50 stars
+    uint256 public constant BALANCED_REP = 400;            // 4.00 stars
     uint256 public constant BALANCED_REVIEWS = 3;
-    uint256 public constant BALANCED_PRICE = 100_000_000; // $100
+    uint256 public constant BALANCED_PRICE = 1_000_000;    // $1.00 USDC
 
-    uint256 public constant AGGRESSIVE_REP = 400;      // 4.00 stars
+    uint256 public constant AGGRESSIVE_REP = 300;          // 3.00 stars
     uint256 public constant AGGRESSIVE_REVIEWS = 1;
-    uint256 public constant AGGRESSIVE_PRICE = 500_000_000; // $500
+    uint256 public constant AGGRESSIVE_PRICE = 10_000_000; // $10.00 USDC
 
     // ═══════════════════════════════════════════════════════════
     // ERRORS

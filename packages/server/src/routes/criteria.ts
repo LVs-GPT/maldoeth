@@ -1,6 +1,8 @@
 import { Router, type Request, type Response, type NextFunction } from "express";
 import type { CriteriaService } from "../services/criteria.js";
 import { ApiError } from "../services/registration.js";
+import { requireAuth } from "../middleware/auth.js";
+import { writeRateLimit } from "../middleware/rateLimit.js";
 
 export function createCriteriaRouter(criteriaService: CriteriaService): Router {
   const router = Router();
@@ -15,8 +17,8 @@ export function createCriteriaRouter(criteriaService: CriteriaService): Router {
     }
   });
 
-  // PUT /api/v1/principals/:address/criteria
-  router.put("/:address/criteria", (req: Request, res: Response, next: NextFunction) => {
+  // PUT /api/v1/principals/:address/criteria — auth required: only the principal can update their own criteria
+  router.put("/:address/criteria", requireAuth, writeRateLimit, (req: Request, res: Response, next: NextFunction) => {
     try {
       const { preset, minReputation, minReviewCount, maxPriceUSDC, requireHumanApproval } = req.body;
 

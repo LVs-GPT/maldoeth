@@ -15,6 +15,8 @@ import { DbReputationAdapter } from "./services/db-reputation-adapter.js";
 import { ChainReputationAdapter } from "./services/chain-reputation-adapter.js";
 import { HybridReputationAdapter } from "./services/hybrid-reputation-adapter.js";
 import { config } from "./config.js";
+import { extractWallet } from "./middleware/auth.js";
+import { readRateLimit } from "./middleware/rateLimit.js";
 
 import { createServicesRouter } from "./routes/services.js";
 import { createCriteriaRouter } from "./routes/criteria.js";
@@ -39,6 +41,8 @@ export function createApp(deps: AppDeps) {
   }));
   app.use(express.json());
   app.use(morgan("short"));
+  app.use(extractWallet); // Extract wallet address from headers on every request
+  app.use(readRateLimit); // Global rate limit (120 req/min per IP)
 
   // Services — hybrid adapter: tries on-chain first, falls back to DB for agents
   // not registered on-chain (e.g. demo/seed agents)
@@ -67,15 +71,16 @@ export function createApp(deps: AppDeps) {
   app.use("/api/v1/agents", createVouchRouter(vouchService));
   app.use("/x402", createX402Router(deps.db));
 
-  // Global error handler
+  // Global error handler — sanitize internal details (B-5)
   app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    if (res.headersSent) return; // Response already sent (e.g. proxy timeout)
+    if (res.headersSent) return;
     if (err instanceof ApiError) {
       res.status(err.statusCode).json({ error: err.message });
       return;
     }
     console.error("Unhandled error:", err);
-    res.status(500).json({ error: err.message || "Internal server error" });
+    // Never expose internal error messages to clients
+    res.status(500).json({ error: "Internal server error" });
   });
 
   return { app, registration, discovery, criteriaService, dealService, ratingService, vouchService, webhookService };

@@ -17,23 +17,29 @@ export interface EvaluationResult {
   reasons: string[];
 }
 
+/**
+ * Criteria presets — SINGLE SOURCE OF TRUTH.
+ * Landing page (index.html) and MaldoRouter.sol MUST match these values.
+ * minReputation is × 100 (e.g. 480 = 4.80 stars).
+ * maxPriceUSDC is in atomic units (6 decimals, e.g. 100_000 = $0.10).
+ */
 const PRESETS: Record<Exclude<CriteriaPreset, "Custom">, Omit<CriteriaConfig, "preset">> = {
   Conservative: {
-    minReputation: 480,
+    minReputation: 480,   // 4.8 stars
     minReviewCount: 5,
     maxPriceUSDC: 100_000, // $0.10 USDC
     requireHumanApproval: false,
   },
   Balanced: {
-    minReputation: 450,
+    minReputation: 400,   // 4.0 stars
     minReviewCount: 3,
-    maxPriceUSDC: 1_000_000, // $1 USDC
+    maxPriceUSDC: 1_000_000, // $1.00 USDC
     requireHumanApproval: false,
   },
   Aggressive: {
-    minReputation: 0,
-    minReviewCount: 0,
-    maxPriceUSDC: 10_000_000, // $10 USDC
+    minReputation: 300,   // 3.0 stars
+    minReviewCount: 1,
+    maxPriceUSDC: 10_000_000, // $10.00 USDC
     requireHumanApproval: false,
   },
   Demo: {

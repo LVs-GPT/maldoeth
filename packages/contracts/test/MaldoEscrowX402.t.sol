@@ -86,8 +86,34 @@ contract MaldoEscrowX402Test is Test {
 
         vm.stopPrank();
 
-        // Fund client with USDC and give escrow allowance
-        usdc.mint(address(escrow), DEAL_AMOUNT); // Pre-fund escrow (simulating facilitator transfer)
+        // Fund facilitator with USDC and approve escrow to pull (safeTransferFrom pattern)
+        usdc.mint(facilitator, DEAL_AMOUNT);
+        vm.prank(facilitator);
+        usdc.approve(address(escrow), type(uint256).max);
+    }
+
+    // ─────────────────────────────────────────────
+    // Constructor validation tests
+    // ─────────────────────────────────────────────
+
+    function test_constructor_zeroAddress_usdc() public {
+        vm.expectRevert(MaldoEscrowX402.ZeroAddress.selector);
+        new MaldoEscrowX402(address(0), address(kleros), facilitator, feeRecipient, address(reputation));
+    }
+
+    function test_constructor_zeroAddress_arbitrator() public {
+        vm.expectRevert(MaldoEscrowX402.ZeroAddress.selector);
+        new MaldoEscrowX402(address(usdc), address(0), facilitator, feeRecipient, address(reputation));
+    }
+
+    function test_constructor_zeroAddress_facilitator() public {
+        vm.expectRevert(MaldoEscrowX402.ZeroAddress.selector);
+        new MaldoEscrowX402(address(usdc), address(kleros), address(0), feeRecipient, address(reputation));
+    }
+
+    function test_constructor_zeroAddress_feeRecipient() public {
+        vm.expectRevert(MaldoEscrowX402.ZeroAddress.selector);
+        new MaldoEscrowX402(address(usdc), address(kleros), facilitator, address(0), address(reputation));
     }
 
     // ─────────────────────────────────────────────
@@ -117,8 +143,8 @@ contract MaldoEscrowX402Test is Test {
         vm.startPrank(facilitator);
         escrow.receivePayment(TEST_NONCE, client, server, DEAL_AMOUNT);
 
-        // Fund escrow again for second attempt
-        usdc.mint(address(escrow), DEAL_AMOUNT);
+        // Fund facilitator again for second attempt
+        usdc.mint(facilitator, DEAL_AMOUNT);
 
         vm.expectRevert(MaldoEscrowX402.DealAlreadySettled.selector);
         escrow.receivePayment(TEST_NONCE, client, server, DEAL_AMOUNT);
@@ -129,6 +155,19 @@ contract MaldoEscrowX402Test is Test {
         vm.expectRevert(MaldoEscrowX402.ZeroAmount.selector);
         vm.prank(facilitator);
         escrow.receivePayment(TEST_NONCE, client, server, 0);
+    }
+
+    function test_receivePayment_ghostDealPrevention() public {
+        // Create a second escrow where facilitator has NO USDC
+        address poorFacilitator = makeAddr("poorFacilitator");
+        MaldoEscrowX402 escrow2 = new MaldoEscrowX402(
+            address(usdc), address(kleros), poorFacilitator, feeRecipient, address(reputation)
+        );
+
+        // poorFacilitator has 0 USDC — safeTransferFrom should revert
+        vm.prank(poorFacilitator);
+        vm.expectRevert(); // ERC20 transfer will fail
+        escrow2.receivePayment(TEST_NONCE, client, server, DEAL_AMOUNT);
     }
 
     // ─────────────────────────────────────────────
@@ -350,7 +389,7 @@ contract MaldoEscrowX402Test is Test {
     function testFuzz_receivePayment_feeCalculation(uint256 amount) public {
         vm.assume(amount > 0 && amount <= 1_000_000_000_000); // up to $1M USDC
 
-        usdc.mint(address(escrow), amount);
+        usdc.mint(facilitator, amount);
 
         bytes32 nonce = keccak256(abi.encode(amount));
         vm.prank(facilitator);

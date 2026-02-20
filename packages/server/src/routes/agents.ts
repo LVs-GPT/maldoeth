@@ -2,6 +2,8 @@ import { Router, type Request, type Response, type NextFunction } from "express"
 import type { RegistrationService } from "../services/registration.js";
 import type { RatingService } from "../services/rating.js";
 import { ApiError } from "../services/registration.js";
+import { requireAuth } from "../middleware/auth.js";
+import { writeRateLimit } from "../middleware/rateLimit.js";
 
 export function createAgentsRouter(registration: RegistrationService, ratingService?: RatingService): Router {
   const router = Router();
@@ -44,19 +46,20 @@ export function createAgentsRouter(registration: RegistrationService, ratingServ
     }
   });
 
-  // POST /api/v1/agents/:agentId/rate
-  router.post("/:agentId/rate", async (req: Request, res: Response, next: NextFunction) => {
+  // POST /api/v1/agents/:agentId/rate — auth required to prevent rating spoofing (B-8)
+  // Uses authenticated wallet as raterAddress instead of body-supplied value
+  router.post("/:agentId/rate", requireAuth, writeRateLimit, async (req: Request, res: Response, next: NextFunction) => {
     try {
       if (!ratingService) throw new ApiError(500, "Rating service not available");
-      const { dealNonce, raterAddress, score, comment } = req.body;
+      const { dealNonce, score, comment } = req.body;
 
       if (!dealNonce) throw new ApiError(400, "dealNonce is required");
-      if (!raterAddress) throw new ApiError(400, "raterAddress is required");
       if (score === undefined) throw new ApiError(400, "score is required");
 
+      // Use authenticated wallet — prevents rating spoofing
       const result = await ratingService.submitRating({
         dealNonce,
-        raterAddress,
+        raterAddress: req.walletAddress!,
         rateeAgentId: req.params.agentId,
         score,
         comment,
